@@ -1,0 +1,6 @@
+pydantic_settings
+fastapi
+jinja2
+prometheus_fastapi_instrumentator
+ckanapi
+pytest
