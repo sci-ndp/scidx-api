@@ -1,0 +1,55 @@
+version: "3"
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      KC_DB: ${KC_DB}
+      KC_DB_URL_HOST: ${KC_DB_URL_HOST}
+      KC_DB_URL_DATABASE: ${KC_DB_URL_DATABASE}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_SCHEMA: ${KC_DB_SCHEMA}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/server.crt.pem
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/server.key.pem
+      KC_HTTPS_PORT: "8443"
+      KEYCLOAK_IMPORT: /opt/keycloak/data/import/realm.json
+      KC_HOSTNAME_STRICT_HTTPS: "true"
+      KC_HOSTNAME: ${HOSTNAME}
+    ports:
+      - ${KEYCLOAK_PORT}:8443
+    volumes:
+      - ${SSL_CERT_PATH}/server.crt.pem:/opt/keycloak/conf/server.crt.pem
+      - ${SSL_CERT_PATH}/server.key.pem:/opt/keycloak/conf/server.key.pem
+      - ${KEYCLOAK_REALM_JSON}:/opt/keycloak/data/import/realm.json
+      - ${KEYCLOAK_THEMES}:/opt/keycloak/themes
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - network_sso
+
+
+  postgres:
+    image: postgres:10
+    command: postgres -c 'max_connections=200' -c 'shared_buffers=24MB'
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: "exit 0"
+    ports:
+      - ${POSTGRES_PORT}:5432
+    volumes:
+      - ${DATA_VOLUME}:/var/lib/postgresql/data
+    networks:
+      - network_sso
+
+networks:  
+  network_sso: {}
