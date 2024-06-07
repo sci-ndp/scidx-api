@@ -1,5 +1,6 @@
 from api.config.ckan_settings import ckan_settings
 
+
 def add_datasource(
     dataset_name, dataset_title, organization_id,
     resource_url, resource_name,
