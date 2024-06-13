@@ -9,8 +9,9 @@ class Settings(BaseSettings):
     def ckan(self):
         return RemoteCKAN(self.ckan_url, apikey=self.ckan_api_key)
 
-    class Config:
-        env_file = "./env_variables/.env_ckan"
-        extra = "allow"
+    model_config = {
+        "env_file": "./env_variables/.env_ckan",
+        "extra": "allow",
+    }
     
 ckan_settings = Settings()

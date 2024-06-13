@@ -7,8 +7,8 @@ router = APIRouter()
 
 
 @router.post(
-    "/",
-    response_model=str,
+    "/datasource",
+    response_model=dict,
     status_code=status.HTTP_201_CREATED,
     summary="Add a new data source",
     description="Create a new dataset and its associated resource in CKAN.",
@@ -17,7 +17,7 @@ router = APIRouter()
             "description": "Dataset created successfully",
             "content": {
                 "application/json": {
-                    "example": "12345678-abcd-efgh-ijkl-1234567890ab"
+                    "example": {"id": "12345678-abcd-efgh-ijkl-1234567890ab"}
                 }
             }
         },
@@ -42,8 +42,8 @@ async def create_datasource(data: DataSourceRequest):
 
     Returns
     -------
-    str
-        The ID of the created dataset if successful.
+    dict
+        A dictionary containing the ID of the created dataset if successful.
 
     Raises
     ------
@@ -54,13 +54,13 @@ async def create_datasource(data: DataSourceRequest):
         dataset_id = datasource_services.add_datasource(
             dataset_name=data.dataset_name,
             dataset_title=data.dataset_title,
-            organization_id=data.organization_id,
+            owner_org=data.owner_org,
             resource_url=data.resource_url,
             resource_name=data.resource_name,
             dataset_description=data.dataset_description,
             resource_description=data.resource_description,
             resource_format=data.resource_format
         )
-        return dataset_id
+        return {"id": dataset_id}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

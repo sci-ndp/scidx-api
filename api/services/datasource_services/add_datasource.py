@@ -2,7 +2,7 @@ from api.config.ckan_settings import ckan_settings
 
 
 def add_datasource(
-    dataset_name, dataset_title, organization_id,
+    dataset_name, dataset_title, owner_org,
     resource_url, resource_name,
     dataset_description="", resource_description="", resource_format=None):
     """
@@ -14,7 +14,7 @@ def add_datasource(
         The name of the dataset to be created.
     dataset_title : str
         The title of the dataset to be created.
-    organization_id : str
+    owner_org : str
         The ID of the organization to which the dataset belongs.
     resource_url : str
         The URL of the resource to be associated with the dataset.
@@ -53,7 +53,7 @@ def add_datasource(
         dataset = ckan.action.package_create(
             name=dataset_name,
             title=dataset_title,
-            owner_org=organization_id,
+            owner_org=owner_org,
             notes=dataset_description
         )
         # Retrieve the dataset ID
