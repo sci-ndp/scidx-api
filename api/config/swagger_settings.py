@@ -6,9 +6,10 @@ class Settings(BaseSettings):
     swagger_description: str = "This is the API documentation."
     swagger_version: str = "0.1.0"
 
-    
-    class Config:
-        env_file = "./env_variables/.env_swagger"
-        extra = "allow"
-    
+    model_config = {
+        "env_file": "./env_variables/.env_swagger",
+        "extra": "allow",
+    }
+
+
 swagger_settings = Settings()
