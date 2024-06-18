@@ -1,11 +1,20 @@
+import os
 import pytest
 import requests
+from dotenv import load_dotenv
 
+# Load environment variables from .env_keycloak file
+load_dotenv(os.path.join(os.path.dirname(__file__), '../env_variables/.env_keycloak'))
 
-KEYCLOAK_URL = "https://keycloak-url:8443"
-KEYCLOAK_ADMIN_USERNAME = "admin-username"
-KEYCLOAK_ADMIN_PASSWORD = "admin-password"
-REALM_NAME = "realm-name"
+KEYCLOAK_URL = os.getenv("KEYCLOAK_URL")
+KEYCLOAK_ADMIN_USERNAME = os.getenv("KEYCLOAK_ADMIN_USERNAME")
+KEYCLOAK_ADMIN_PASSWORD = os.getenv("KEYCLOAK_ADMIN_PASSWORD")
+REALM_NAME = os.getenv("REALM_NAME")
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
+USER_ID = os.getenv("USER_ID")
+USER_SECRET = os.getenv("USER_SECRET")
+
 
 # Helper function to get admin token
 def get_admin_token():
@@ -20,8 +29,11 @@ def get_admin_token():
         "Content-Type": "application/x-www-form-urlencoded"
     }
     response = requests.post(url, data=data, headers=headers)
+    print("Response Status Code:", response.status_code)
+    print("Response Text:", response.text)
     response.raise_for_status()
     return response.json()["access_token"]
+
 
 # Helper function to create a user
 def create_user(token, username, email):
@@ -33,11 +45,19 @@ def create_user(token, username, email):
     data = {
         "username": username,
         "email": email,
-        "enabled": True
+        "enabled": True,
+        "credentials": [
+            {
+                "type": "password",
+                "value": USER_SECRET,
+                "temporary": False
+            }
+        ]
     }
     response = requests.post(url, json=data, headers=headers)
     response.raise_for_status()
     return response.headers["Location"]
+
 
 # Helper function to delete a user
 def delete_user(token, user_id):
@@ -47,6 +67,7 @@ def delete_user(token, user_id):
     }
     response = requests.delete(url, headers=headers)
     response.raise_for_status()
+
 
 # Helper function to get user by username
 def get_user_by_username(token, username):
@@ -61,10 +82,11 @@ def get_user_by_username(token, username):
     response.raise_for_status()
     return response.json()
 
+
 def test_create_user_success():
     token = get_admin_token()
-    username = "testuser"
-    email = "testuser@example.com"
+    username = USER_ID
+    email = USER_ID
     
     # Create user
     user_url = create_user(token, username, email)
@@ -84,7 +106,7 @@ def test_create_user_success():
 
 def test_create_user_failure():
     token = get_admin_token()
-    username = "testuser"
+    username = USER_ID
     email = "invalid-email"  # Invalid email format
     
     # Try to create user with invalid email
