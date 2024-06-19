@@ -4,3 +4,5 @@ jinja2
 prometheus_fastapi_instrumentator
 ckanapi
 pytest
+aiokafka
+pytest-asyncio
