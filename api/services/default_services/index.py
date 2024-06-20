@@ -11,7 +11,7 @@ def index(request: Request):
     try:
         ckan_status = "CKAN is active" if status_services.check_ckan_status() else "CKAN is not reachable"
     except Exception as e:
-        ckan_status = f"Error checking CKAN status: {str(e)}"
+        ckan_status = "CKAN not found."
     
     return templates.TemplateResponse(
         request=request,
