@@ -81,6 +81,15 @@ def search_kafka(
                     for res in resources if res.get('format') == 'Kafka'
                 ]
 
+                # Filter by Kafka host, port, and topic if provided
+                if kafka_host or kafka_port or kafka_topic:
+                    kafka_resources = [
+                        res for res in kafka_resources
+                        if (not kafka_host or res.kafka_host == kafka_host) and
+                           (not kafka_port or res.kafka_port == kafka_port) and
+                           (not kafka_topic or res.kafka_topic == kafka_topic)
+                    ]
+
                 if kafka_resources:
                     organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
 
