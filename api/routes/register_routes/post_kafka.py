@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
-from api.services import datasource_services
-from api.models.datasourcerequest_kafka_model import KafkaDataSourceRequest
+from api.services import kafka_services
+from api.models.request_kafka_model import KafkaDataSourceRequest
 
 router = APIRouter()
 
@@ -50,7 +50,7 @@ async def create_kafka_datasource(data: KafkaDataSourceRequest):
         If there is an error creating the dataset or resource, an HTTPException is raised with a detailed message.
     """
     try:
-        dataset_id = datasource_services.add_kafka_datasource(
+        dataset_id = kafka_services.add_kafka(
             dataset_name=data.dataset_name,
             dataset_title=data.dataset_title,
             owner_org=data.owner_org,

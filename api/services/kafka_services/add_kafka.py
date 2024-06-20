@@ -1,4 +1,3 @@
-# api/services/datasource_services.py
 from api.config.ckan_settings import ckan_settings
 
 def add_kafka(dataset_name, dataset_title, owner_org, kafka_topic, kafka_host, kafka_port, dataset_description):
@@ -55,7 +54,7 @@ def add_kafka(dataset_name, dataset_title, owner_org, kafka_topic, kafka_host, k
             # Try to create the resource within the newly created dataset
             ckan.action.resource_create(
                 package_id=dataset_id,
-                url=f"{kafka_host}:{kafka_port}:{kafka_topic}",
+                url=f"{kafka_host};{kafka_port};{kafka_topic}",
                 name=kafka_topic,
                 description=f"Kafka topic {kafka_topic} hosted at {kafka_host}:{kafka_port}",
                 format="Kafka"
