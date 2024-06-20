@@ -118,6 +118,35 @@
 ]
 ```
 
+
+## URL Endpoints
+
+- **Create URL Resource**
+  - **URL:** `/url`
+  - **Method:** `POST`
+  - **Description:** Add a URL resource to CKAN.
+  - **Request Body:**
+    
+```json
+{
+    "resource_name": "example_resource",
+    "resource_title": "Example Resource",
+    "owner_org": "organization_id",
+    "resource_url": "http://example.com/resource",
+    "notes": "Resource created for testing."
+}
+```
+
+  - **Response:**
+    
+```json
+{
+    "id": "resource_id",
+    "message": "Resource created successfully"
+}
+```
+
+
 ## Status Endpoint
 
 - **Check CKAN Status**
