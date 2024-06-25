@@ -47,10 +47,9 @@ def get_user_token(username, password):
         "Content-Type": "application/x-www-form-urlencoded"
     }
     response = requests.post(url, data=data, headers=headers)
-    print("User Token Response Status Code:", response.status_code)
-    print("User Token Response Text:", response.text)
     response.raise_for_status()
     return response.json()["access_token"]
+
 
 # Helper function to introspect user token
 def introspect_user_token(admin_token, user_token):
