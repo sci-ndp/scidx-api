@@ -4,7 +4,7 @@ from api.config import keycloak_settings
 
 
 def get_admin_token():
-    url = f"{keycloak_settings.keyloak_url}/realms/master/protocol/openid-connect/token"
+    url = f"{keycloak_settings.keycloak_url}/realms/master/protocol/openid-connect/token"
     data = {
         "grant_type": "password",
         "client_id": "admin-cli",
