@@ -37,7 +37,7 @@ async def create_url_resource(
     # _=Depends(get_current_user)
 ):
     """
-    Add a URL resource to CKAN.
+    Add a URL resource.
 
     Parameters
     ----------

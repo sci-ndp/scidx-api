@@ -9,7 +9,7 @@ router = APIRouter()
     response_model=dict,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new organization",
-    description="Create a new organization in CKAN with the given name, title, and description.",
+    description="Create a new organization with the given name, title, and description.",
     responses={
         201: {
             "description": "Organization created successfully",

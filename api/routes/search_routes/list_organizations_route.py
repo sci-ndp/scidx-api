@@ -8,7 +8,7 @@ router = APIRouter()
     "/organization",
     response_model=List[str],
     summary="List all organizations",
-    description="Retrieve a list of all organizations in CKAN.",
+    description="Retrieve a list of all organizations.",
     responses={
         200: {
             "description": "A list of all organizations",
@@ -30,7 +30,7 @@ router = APIRouter()
 )
 async def list_organizations():
     """
-    Endpoint to list all organizations in CKAN.
+    Endpoint to list all organizations.
 
     Returns
     -------

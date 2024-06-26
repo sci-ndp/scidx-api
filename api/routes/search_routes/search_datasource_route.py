@@ -6,7 +6,7 @@ from api.models import DataSourceResponse
 router = APIRouter()
 
 @router.get(
-    "/datasource",
+    "/search",
     response_model=List[DataSourceResponse],
     summary="Search data sources",
     description="Search datasets by various parameters.",
@@ -58,7 +58,7 @@ async def search_datasource(
     search_term: Optional[str] = Query(None, description="A term to search across all fields.")
 ):
     """
-    Endpoint to search datasets in CKAN by various parameters.
+    Endpoint to search by various parameters.
 
     Parameters
     ----------
