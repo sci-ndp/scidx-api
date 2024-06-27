@@ -5,7 +5,7 @@ from .get_admin_token import get_admin_token
 def get_user_by_username(username):
     admin_token = get_admin_token()
     url = f"{keycloak_settings.keycloak_url}/admin/realms/" + \
-        "{keycloak_settings.realm_name}/users"
+        f"{keycloak_settings.realm_name}/users"
     headers = {
         "Authorization": f"Bearer {admin_token}"
     }

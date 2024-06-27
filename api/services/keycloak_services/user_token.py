@@ -3,7 +3,7 @@ import requests
 from api.config import keycloak_settings
 
 def get_user_token(username, password):
-    url = f"{keycloak_settings.keyloak_url}/realms/" + \
+    url = f"{keycloak_settings.keycloak_url}/realms/" + \
         f"{keycloak_settings.realm_name}/protocol/openid-connect/token"
     data = {
         "grant_type": "password",

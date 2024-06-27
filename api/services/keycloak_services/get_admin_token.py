@@ -15,7 +15,7 @@ def get_admin_token():
         "Content-Type": "application/x-www-form-urlencoded"
     }
     response = requests.post(url, data=data, headers=headers)
-    print("Response Status Code (Admin Token):", response.status_code)
-    print("Response Text (Admin Token):", response.text)
+    # print("Response Status Code (Admin Token):", response.status_code)
+    # print("Response Text (Admin Token):", response.text)
     response.raise_for_status()
     return response.json()["access_token"]

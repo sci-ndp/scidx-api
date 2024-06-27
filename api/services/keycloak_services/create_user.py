@@ -32,7 +32,7 @@ def create_user(username, email, password):
         ]
     }
     response = requests.post(url, json=data, headers=headers)
-    print("Create User Response Status Code:", response.status_code)
-    print("Create User Response Text:", response.text)
+    # print("Create User Response Status Code:", response.status_code)
+    # print("Create User Response Text:", response.text)
     response.raise_for_status()
     return response.headers["Location"].split("/")[-1]

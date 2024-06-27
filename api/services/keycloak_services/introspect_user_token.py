@@ -18,7 +18,7 @@ def introspect_user_token(user_token):
         "Content-Type": "application/x-www-form-urlencoded"
     }
     response = requests.post(introspection_url, data=data, headers=headers)
-    print("Introspection Response Status Code:", response.status_code)
-    print("Introspection Response Text:", response.text)
+    # print("Introspection Response Status Code:", response.status_code)
+    # print("Introspection Response Text:", response.text)
     response.raise_for_status()
     return response.json()
