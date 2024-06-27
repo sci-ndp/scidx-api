@@ -37,4 +37,5 @@ SWAGGER_VERSION=0.1.0
 - Ensure that your CKAN instance is running and accessible from the machine where the API is deployed.
 - The CKAN API key must have the necessary permissions to create and manage datasets and organizations.
 
+Next step is [running the api](../docs/usage.md)
 [Return to README.md](../README.md)

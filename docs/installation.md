@@ -37,5 +37,6 @@
     SWAGGER_DESCRIPTION=API documentation
     SWAGGER_VERSION=0.1.0
     ```
+6. After finishing the installation and making sure everything is working please go to [configuration](../docs/configuration.md)
 
 [Return to README.md](../README.md)
