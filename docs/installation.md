@@ -4,13 +4,13 @@
 
 - Python 3.10 or higher
 - virtualenv (optional but recommended)
-- An instance of CKAN (https://docs.ckan.org/) installed and running
+- An instance of [CKAN](https://github.com/ckan/ckan-docker.git) installed and running. "[official documentation](https://docs.ckan.org/en/2.10/maintaining/installing/index.html)"
 
 ## Steps
 
 1. Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/scidx-api.git
+    git clone https://github.com/sci-ndp/scidx-api.git
     cd scidx-api
     ```
 

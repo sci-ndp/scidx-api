@@ -48,7 +48,7 @@ def search_datasource(
     Exception
         If there is an error during the search.
     """
-    ckan = ckan_settings.ckan
+    ckan = ckan_settings.ckan_no_api_key  # Use the no API key instance
     search_params = []
 
     if search_term:

@@ -17,8 +17,7 @@ CKAN_API_KEY=your-ckan-api-key
 ```
 
 - `CKAN_URL`: The URL of your CKAN instance.
-- `CKAN_API_KEY`: Your CKAN API key.
-
+- `CKAN_API_KEY`: Your CKAN API key. "please see [here](https://docs.ckan.org/en/2.10/api/index.html#authentication-and-api-tokens) how to optain an api key
 ### .env_swagger
 
 This file contains the configuration for Swagger documentation.

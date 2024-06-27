@@ -145,7 +145,32 @@
     "message": "Resource created successfully"
 }
 ```
+## S3 Endpoints
 
+- **Create URL Resource**
+  - **URL:** `/s3`
+  - **Method:** `POST`
+  - **Description:** Add a URL resource to CKAN.
+  - **Request Body:**
+    
+```json
+{
+    "resource_name": "example_resource",
+    "resource_title": "Example Resource",
+    "owner_org": "organization_id",
+    "resource_url": "http://example.com/resource",
+    "notes": "Resource created for testing."
+}
+```
+
+  - **Response:**
+    
+```json
+{
+    "id": "resource_id",
+    "message": "Resource created successfully"
+}
+```
 
 ## Status Endpoint
 
