@@ -1,10 +1,13 @@
 from api.config.ckan_settings import ckan_settings
 
+# Define a set of reserved keys that should not be used in the extras
+RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'collection'}
+
 def add_s3(
     resource_name, resource_title, owner_org,
-    resource_s3, notes=""):
+    resource_s3, notes="", extras=None):
     """
-    Add a S3 resource to CKAN.
+    Add an S3 resource to CKAN.
 
     Parameters
     ----------
@@ -15,9 +18,11 @@ def add_s3(
     owner_org : str
         The ID of the organization to which the resource belongs.
     resource_s3 : str
-        The S3 of the resource to be added.
+        The S3 URL of the resource to be added.
     notes : str, optional
         Additional notes about the resource (default is an empty string).
+    extras : dict, optional
+        Additional metadata to be added to the resource package as extras (default is None).
 
     Returns
     -------
@@ -26,25 +31,36 @@ def add_s3(
 
     Raises
     ------
+    ValueError
+        If any input parameter is invalid.
+    KeyError
+        If any reserved key is found in the extras.
     Exception
         If there is an error creating the resource, an exception is raised with a detailed message.
-
-    Examples
-    --------
-    >>> add_s3_resource("resource_name", "Resource Title", "org_id", "http://example.com/resource")
-    '12345678-abcd-efgh-ijkl-1234567890ab'
     """
+
+    if not isinstance(extras, (dict, type(None))):
+        raise ValueError("Extras must be a dictionary or None.")
+
+    if extras and RESERVED_KEYS.intersection(extras):
+        raise KeyError(f"Extras contain reserved keys: {RESERVED_KEYS.intersection(extras)}")
 
     ckan = ckan_settings.ckan
 
     try:
-        # Try to create the resource package in CKAN
-        resource_package = ckan.action.package_create(
-            name=resource_name,
-            title=resource_title,
-            owner_org=owner_org,
-            notes=notes
-        )
+        # Create the resource package in CKAN with additional extras if provided
+        resource_package_dict = {
+            'name': resource_name,
+            'title': resource_title,
+            'owner_org': owner_org,
+            'notes': notes
+        }
+
+        if extras:
+            resource_package_dict['extras'] = [{'key': k, 'value': v} for k, v in extras.items()]
+
+        resource_package = ckan.action.package_create(**resource_package_dict)
+
         # Retrieve the resource package ID
         resource_package_id = resource_package['id']
     except Exception as e:
@@ -53,7 +69,7 @@ def add_s3(
     
     if resource_package_id:
         try:
-            # Try to create the resource within the newly created resource package
+            # Create the resource within the newly created resource package
             ckan.action.resource_create(
                 package_id=resource_package_id,
                 url=resource_s3,

@@ -99,13 +99,16 @@ def search_datasource(
 
                 organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
 
+                extras = {extra['key']: extra['value'] for extra in dataset.get('extras', [])}
+
                 results.append(DataSourceResponse(
                     id=dataset['id'],
                     name=dataset['name'],
                     title=dataset['title'],
                     owner_org=organization_name,
                     description=dataset.get('notes'),
-                    resources=resources_list
+                    resources=resources_list,
+                    extras=extras
                 ))
         
         return results

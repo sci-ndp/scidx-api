@@ -30,7 +30,11 @@ router = APIRouter()
                                     "description": "This is an example resource.",
                                     "format": "CSV"
                                 }
-                            ]
+                            ],
+                            "extras": {
+                                "key1": "value1",
+                                "key2": "value2"
+                            }
                         }
                     ]
                 }

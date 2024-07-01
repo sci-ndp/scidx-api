@@ -93,13 +93,16 @@ def search_kafka(
                 if kafka_resources:
                     organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
 
+                    extras = {extra['key']: extra['value'] for extra in dataset.get('extras', [])}
+
                     results.append(KafkaDataSourceResponse(
                         id=dataset['id'],
                         name=dataset['name'],
                         title=dataset['title'],
                         owner_org=organization_name,
                         description=dataset.get('notes'),
-                        resources=kafka_resources
+                        resources=kafka_resources,
+                        extras=extras
                     ))
             except IndexError:
                 print(f"Skipping dataset {dataset['name']} due to index error in resources.")

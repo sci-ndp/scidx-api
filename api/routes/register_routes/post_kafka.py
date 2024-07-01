@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, status
-
 from api.services import kafka_services
 from api.models.request_kafka_model import KafkaDataSourceRequest
 
@@ -57,8 +56,13 @@ async def create_kafka_datasource(data: KafkaDataSourceRequest):
             kafka_topic=data.kafka_topic,
             kafka_host=data.kafka_host,
             kafka_port=data.kafka_port,
-            dataset_description=data.dataset_description
+            dataset_description=data.dataset_description,
+            extras=data.extras
         )
         return {"id": dataset_id}
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Reserved key error: {str(e)}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

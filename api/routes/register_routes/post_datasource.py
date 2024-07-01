@@ -1,10 +1,8 @@
 from fastapi import APIRouter, HTTPException, status
-
 from api.services import datasource_services
 from api.models import DataSourceRequest
 
 router = APIRouter()
-
 
 @router.post(
     "/datasource",
@@ -59,8 +57,13 @@ async def create_datasource(data: DataSourceRequest):
             resource_name=data.resource_name,
             dataset_description=data.dataset_description,
             resource_description=data.resource_description,
-            resource_format=data.resource_format
+            resource_format=data.resource_format,
+            extras=data.extras
         )
         return {"id": dataset_id}
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Reserved key error: {str(e)}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

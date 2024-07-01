@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 from api.services.kafka_services.search_kafka import search_kafka
-from api.models.response_kafka_model import KafkaDataSourceResponse  # Change the model import to Kafka specific model
+from api.models.response_kafka_model import KafkaDataSourceResponse
 
 router = APIRouter()
 
@@ -30,7 +30,11 @@ router = APIRouter()
                                     "kafka_topic": "example_topic",
                                     "description": "This is an example Kafka resource."
                                 }
-                            ]
+                            ],
+                            "extras": {
+                                "key1": "value1",
+                                "key2": "value2"
+                            }
                         }
                     ]
                 }

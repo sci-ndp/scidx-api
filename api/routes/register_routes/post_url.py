@@ -1,11 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-
-from api.services.keycloak_services.get_current_user import get_current_user
 from api.services.url_services.add_url import add_url
 from api.models.urlrequest_model import URLRequest
 
 router = APIRouter()
-
 
 @router.post(
     "/url",
@@ -32,12 +29,9 @@ router = APIRouter()
         }
     }
 )
-async def create_url_resource(
-    data: URLRequest,
-    # _=Depends(get_current_user)
-):
+async def create_url_resource(data: URLRequest):
     """
-    Add a URL resource.
+    Add a URL resource to CKAN.
 
     Parameters
     ----------
@@ -60,8 +54,13 @@ async def create_url_resource(
             resource_title=data.resource_title,
             owner_org=data.owner_org,
             resource_url=data.resource_url,
-            notes=data.notes
+            notes=data.notes,
+            extras=data.extras
         )
         return {"id": resource_id}
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Reserved key error: {str(e)}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
