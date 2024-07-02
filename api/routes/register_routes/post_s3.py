@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status
 from api.services.s3_services.add_s3 import add_s3
 from api.models.s3request_model import S3Request
+from tenacity import RetryError
 
 router = APIRouter()
 
@@ -58,6 +59,9 @@ async def create_s3_resource(data: S3Request):
             extras=data.extras
         )
         return {"id": resource_id}
+    except RetryError as e:
+        final_exception = e.last_attempt.exception()
+        raise HTTPException(status_code=400, detail=str(final_exception))
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Reserved key error: {str(e)}")
     except ValueError as e:

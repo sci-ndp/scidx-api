@@ -1,11 +1,17 @@
-from ckanapi import NotFound
-from api.config.ckan_settings import ckan_settings
 from typing import List
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from api.config.ckan_settings import ckan_settings
+from api.services.default_services import log_retry_attempt
 
-
+@retry(
+    wait=wait_exponential(multiplier=1, max=2),
+    stop=stop_after_attempt(5),
+    retry=retry_if_exception_type(Exception),
+    after=log_retry_attempt
+)
 def list_organization() -> List[str]:
     """
-    List all organizations in CKAN.
+    Retrieve a list of all organizations.
 
     Returns
     -------
@@ -20,10 +26,8 @@ def list_organization() -> List[str]:
     ckan = ckan_settings.ckan
 
     try:
-        # Retrieve the list of organizations
         organizations = ckan.action.organization_list()
         return organizations
-    except NotFound:
-        raise Exception("CKAN API endpoint not found")
+
     except Exception as e:
-        raise Exception(f"Error retrieving organizations: {str(e)}")
+        raise Exception(f"Error retrieving list of organizations: {str(e)}")

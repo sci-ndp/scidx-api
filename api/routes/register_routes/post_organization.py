@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from api.models import OrganizationRequest
 from api.services import organization_services
+from tenacity import RetryError
 
 router = APIRouter()
 
@@ -60,8 +61,9 @@ async def create_organization_endpoint(org: OrganizationRequest):
             description=org.description
         )
         return {"id": organization_id, "message": "Organization created successfully"}
-    except Exception as e:
-        error_message = str(e)
+    except RetryError as e:
+        final_exception = e.last_attempt.exception()
+        error_message = str(final_exception)
         if "Group name already exists in database" in error_message:
             raise HTTPException(status_code=400, detail="Organization name already exists.")
         elif "Validation error" in error_message:
@@ -70,3 +72,5 @@ async def create_organization_endpoint(org: OrganizationRequest):
             raise HTTPException(status_code=404, detail="CKAN API endpoint not found")
         else:
             raise HTTPException(status_code=400, detail=f"Unexpected error: {error_message}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

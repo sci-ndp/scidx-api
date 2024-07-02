@@ -6,3 +6,7 @@ ckanapi
 pytest
 aiokafka
 pytest-asyncio
+httpx
+tenacity
+cachetools
+uvicorn

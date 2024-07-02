@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from api.services import kafka_services
 from api.models.request_kafka_model import KafkaDataSourceRequest
+from tenacity import RetryError
 
 router = APIRouter()
 
@@ -60,9 +61,8 @@ async def create_kafka_datasource(data: KafkaDataSourceRequest):
             extras=data.extras
         )
         return {"id": dataset_id}
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Reserved key error: {str(e)}")
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
+    except RetryError as e:
+        final_exception = e.last_attempt.exception()
+        raise HTTPException(status_code=400, detail=str(final_exception))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

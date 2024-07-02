@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status
 from api.services.url_services.add_url import add_url
 from api.models.urlrequest_model import URLRequest
+from tenacity import RetryError
 
 router = APIRouter()
 
@@ -58,6 +59,9 @@ async def create_url_resource(data: URLRequest):
             extras=data.extras
         )
         return {"id": resource_id}
+    except RetryError as e:
+        final_exception = e.last_attempt.exception()
+        raise HTTPException(status_code=400, detail=str(final_exception))
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Reserved key error: {str(e)}")
     except ValueError as e:

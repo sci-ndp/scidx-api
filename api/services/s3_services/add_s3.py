@@ -1,8 +1,16 @@
 from api.config.ckan_settings import ckan_settings
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from api.services.default_services import log_retry_attempt
 
 # Define a set of reserved keys that should not be used in the extras
 RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'collection'}
 
+@retry(
+    wait=wait_exponential(multiplier=1, max=2),
+    stop=stop_after_attempt(5),
+    retry=retry_if_exception_type(Exception),
+    after=log_retry_attempt
+)
 def add_s3(
     resource_name, resource_title, owner_org,
     resource_s3, notes="", extras=None):
