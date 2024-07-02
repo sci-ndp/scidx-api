@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
-
 from api.services import kafka_services
 from api.models.request_kafka_model import KafkaDataSourceRequest
+from tenacity import RetryError
 
 router = APIRouter()
 
@@ -57,8 +57,12 @@ async def create_kafka_datasource(data: KafkaDataSourceRequest):
             kafka_topic=data.kafka_topic,
             kafka_host=data.kafka_host,
             kafka_port=data.kafka_port,
-            dataset_description=data.dataset_description
+            dataset_description=data.dataset_description,
+            extras=data.extras
         )
         return {"id": dataset_id}
+    except RetryError as e:
+        final_exception = e.last_attempt.exception()
+        raise HTTPException(status_code=400, detail=str(final_exception))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

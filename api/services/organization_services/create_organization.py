@@ -1,7 +1,15 @@
 from typing import Optional
 from ckanapi import NotFound, ValidationError
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from api.config.ckan_settings import ckan_settings
+from api.services.default_services import log_retry_attempt
 
+@retry(
+    wait=wait_exponential(multiplier=1, max=2),
+    stop=stop_after_attempt(5),
+    retry=retry_if_exception_type(Exception),
+    after=log_retry_attempt
+)
 def create_organization(name: str, title: str, description: Optional[str] = None) -> str:
     """
     Create a new organization in CKAN.

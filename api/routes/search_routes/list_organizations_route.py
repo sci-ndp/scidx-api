@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
 from api.services import organization_services
+from tenacity import RetryError
 
 router = APIRouter()
 
@@ -45,5 +46,8 @@ async def list_organizations():
     try:
         organizations = organization_services.list_organization()
         return organizations
+    except RetryError as e:
+        final_exception = e.last_attempt.exception()
+        raise HTTPException(status_code=400, detail=str(final_exception))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

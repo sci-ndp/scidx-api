@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
 from api.services import datasource_services
 from api.models import DataSourceResponse
+from tenacity import RetryError
 
 router = APIRouter()
 
@@ -30,7 +31,11 @@ router = APIRouter()
                                     "description": "This is an example resource.",
                                     "format": "CSV"
                                 }
-                            ]
+                            ],
+                            "extras": {
+                                "key1": "value1",
+                                "key2": "value2"
+                            }
                         }
                     ]
                 }
@@ -104,5 +109,8 @@ async def search_datasource(
             search_term=search_term
         )
         return results
+    except RetryError as e:
+        final_exception = e.last_attempt.exception()
+        raise HTTPException(status_code=400, detail=str(final_exception))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

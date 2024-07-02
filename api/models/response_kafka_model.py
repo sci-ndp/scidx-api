@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 class KafkaResource(BaseModel):
     id: str = Field(..., 
@@ -22,7 +22,6 @@ class KafkaResource(BaseModel):
                                        json_schema_extra={
                                            "description": "A description of the resource.",
                                            "example": "This is an example Kafka resource."})
-
 
 class KafkaDataSourceResponse(BaseModel):
     id: str = Field(..., alias="id",
@@ -47,5 +46,9 @@ class KafkaDataSourceResponse(BaseModel):
     resources: List[KafkaResource] = Field(...,
                                            json_schema_extra={
                                                "description": "A list of Kafka resources associated with the dataset."})
+    extras: Optional[Dict[str, str]] = Field(None, 
+                                             json_schema_extra={
+                                                 "description": "Additional metadata associated with the dataset.",
+                                                 "example": {"key1": "value1", "key2": "value2"}})
 
     model_config = ConfigDict(populate_by_name=True)

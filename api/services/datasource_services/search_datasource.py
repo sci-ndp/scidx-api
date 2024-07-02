@@ -1,8 +1,16 @@
 from typing import List, Optional
 from ckanapi import NotFound
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from api.config.ckan_settings import ckan_settings
 from api.models import DataSourceResponse, Resource
+from api.services.default_services import log_retry_attempt
 
+@retry(
+    wait=wait_exponential(multiplier=1, max=2),
+    stop=stop_after_attempt(5),
+    retry=retry_if_exception_type(Exception),
+    after=log_retry_attempt
+)
 def search_datasource(
     dataset_name: Optional[str] = None,
     dataset_title: Optional[str] = None,
@@ -99,13 +107,16 @@ def search_datasource(
 
                 organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
 
+                extras = {extra['key']: extra['value'] for extra in dataset.get('extras', [])}
+
                 results.append(DataSourceResponse(
                     id=dataset['id'],
                     name=dataset['name'],
                     title=dataset['title'],
                     owner_org=organization_name,
                     description=dataset.get('notes'),
-                    resources=resources_list
+                    resources=resources_list,
+                    extras=extras
                 ))
         
         return results

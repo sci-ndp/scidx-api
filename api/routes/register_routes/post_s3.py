@@ -1,18 +1,16 @@
-from fastapi import APIRouter, HTTPException, status, Depends
-
-from api.services.keycloak_services.get_current_user import get_current_user
+from fastapi import APIRouter, HTTPException, status
 from api.services.s3_services.add_s3 import add_s3
 from api.models.s3request_model import S3Request
+from tenacity import RetryError
 
 router = APIRouter()
-
 
 @router.post(
     "/s3",
     response_model=dict,
     status_code=status.HTTP_201_CREATED,
     summary="Add a new S3 resource",
-    description="Create a new URL resource.",
+    description="Create a new S3 resource.",
     responses={
         201: {
             "description": "Resource created successfully",
@@ -32,17 +30,14 @@ router = APIRouter()
         }
     }
 )
-async def create_s3_resource(
-    data: S3Request,
-    # _=Depends(get_current_user)
-):
+async def create_s3_resource(data: S3Request):
     """
-    Add a URL resource to CKAN.
+    Add an S3 resource to CKAN.
 
     Parameters
     ----------
-    data : URLRequest
-        An object containing all the required parameters for creating a URL resource.
+    data : S3Request
+        An object containing all the required parameters for creating an S3 resource.
 
     Returns
     -------
@@ -60,8 +55,16 @@ async def create_s3_resource(
             resource_title=data.resource_title,
             owner_org=data.owner_org,
             resource_s3=data.resource_s3,
-            notes=data.notes
+            notes=data.notes,
+            extras=data.extras
         )
         return {"id": resource_id}
+    except RetryError as e:
+        final_exception = e.last_attempt.exception()
+        raise HTTPException(status_code=400, detail=str(final_exception))
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Reserved key error: {str(e)}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
