@@ -30,7 +30,7 @@ def delete_dataset(dataset_id):
     ckan = ckan_settings.ckan
 
     try:
-        ckan.action.package_delete(id=dataset_id)
+        ckan.action.dataset_purge(id=dataset_id)
         return "Dataset deleted successfully"
     except Exception as e:
         raise Exception(f"Error deleting dataset: {str(e)}")

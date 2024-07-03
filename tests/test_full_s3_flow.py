@@ -24,9 +24,9 @@ def get_auth_token(api_url, username, password):
         print(f"Failed to retrieve auth token. Status code: {response.status_code}, Response: {response.text}")
         response.raise_for_status()
 
-# Function to post URL resource data to CKAN
-def post_url_resource(api_url, resource_data, headers):
-    endpoint = f"{api_url}/url"
+# Function to post S3 resource data to CKAN
+def post_s3_resource(api_url, resource_data, headers):
+    endpoint = f"{api_url}/s3"
     response = requests.post(endpoint, json=resource_data, headers=headers)
     if response.status_code == 201:
         print("Resource created successfully:", response.json())
@@ -35,8 +35,8 @@ def post_url_resource(api_url, resource_data, headers):
         print("Error creating resource:", response.status_code, response.json())
         response.raise_for_status()
 
-# Function to get URL resources from CKAN
-def get_url_resources(api_url, headers):
+# Function to get S3 resources from CKAN
+def get_s3_resources(api_url, headers):
     endpoint = f"{api_url}/search"
     response = requests.get(endpoint, headers=headers)
     if response.status_code == 200:
@@ -46,9 +46,9 @@ def get_url_resources(api_url, headers):
         print(f"Failed to retrieve resources. Status code: {response.status_code}, Response: {response.text}")
         response.raise_for_status()
 
-# Function to update URL resource data in CKAN
-def put_url_resource(api_url, resource_id, update_data, headers):
-    endpoint = f"{api_url}/url/{resource_id}"
+# Function to update S3 resource data in CKAN
+def put_s3_resource(api_url, resource_id, update_data, headers):
+    endpoint = f"{api_url}/s3/{resource_id}"
     response = requests.put(endpoint, json=update_data, headers=headers)
     if response.status_code == 200:
         print("Resource updated successfully:", response.json())
@@ -57,7 +57,7 @@ def put_url_resource(api_url, resource_id, update_data, headers):
         print("Error updating resource:", response.status_code, response.json())
         response.raise_for_status()
 
-# Function to delete URL resource from CKAN
+# Function to delete S3 resource from CKAN
 def delete_resource(api_url, resource_id, headers):
     endpoint = f"{api_url}/dataset/{resource_id}"
     response = requests.delete(endpoint, headers=headers)
@@ -68,63 +68,63 @@ def delete_resource(api_url, resource_id, headers):
         print("Error deleting resource:", response.status_code, response.json())
         response.raise_for_status()
 
-# Pytest test function for URL
+# Pytest test function for S3
 @pytest.mark.asyncio
-async def test_url_ckan_integration():
+async def test_s3_ckan_integration():
     # Get auth token
     token = get_auth_token(API_URL, USERNAME, PASSWORD)
     headers = {"Authorization": f"Bearer {token}"}
 
     # Generate a unique resource name
-    resource_name = generate_unique_resource_name("url_example_")
+    resource_name = generate_unique_resource_name("s3_example_")
 
-    # Step 2: Register URL resource as dataset in CKAN
+    # Step 2: Register S3 resource as dataset in CKAN
     resource_data = {
         "resource_name": resource_name,
-        "resource_title": "Random URL Example",
+        "resource_title": "Random S3 Example",
         "owner_org": OWNER_ORG,
-        "resource_url": "http://example.com/resource",
-        "notes": "This is a randomly generated URL resource registered as a CKAN dataset."
+        "resource_s3": "http://example.com/resource",
+        "notes": "This is a randomly generated S3 resource registered as a CKAN dataset."
     }
-    created_resource = post_url_resource(API_URL, resource_data, headers)
+    created_resource = post_s3_resource(API_URL, resource_data, headers)
     resource_id = created_resource["id"]
 
     # Add a delay to ensure the resource is indexed
     time.sleep(2)
 
-    # Step 3: Retrieve URL resource information from CKAN
-    url_resources = get_url_resources(API_URL, headers)
-    resource_info = next((res for res in url_resources if res['name'] == resource_name), None)
+    # Step 3: Retrieve S3 resource information from CKAN
+    s3_resources = get_s3_resources(API_URL, headers)
+    resource_info = next((res for res in s3_resources if res['name'] == resource_name), None)
     assert resource_info is not None
 
-    # Step 4: Update URL resource
+    # Step 4: Update S3 resource
     update_data = {
-        "resource_title": "Updated Random URL Example",
+        "resource_title": "Updated Random S3 Example",
         "notes": "This is an updated description.",
         "extras": {"new_key": "new_value"}
     }
-    put_url_resource(API_URL, resource_id, update_data, headers)
+    put_s3_resource(API_URL, resource_id, update_data, headers)
 
     # Add a delay to ensure the resource is updated
     time.sleep(2)
 
     # Step 5: Verify the update
-    updated_resources = get_url_resources(API_URL, headers)
+    updated_resources = get_s3_resources(API_URL, headers)
     updated_resource_info = next((res for res in updated_resources if res['name'] == resource_name), None)
     assert updated_resource_info is not None
-    assert updated_resource_info["title"] == "Updated Random URL Example"
+    assert updated_resource_info["title"] == "Updated Random S3 Example"
     assert updated_resource_info["notes"] == "This is an updated description."
     assert "new_key" in updated_resource_info["extras"]
     assert updated_resource_info["extras"]["new_key"] == "new_value"
 
-    # Step 6: Delete URL resource
+    # Step 6: Delete S3 resource
     delete_resource(API_URL, resource_id, headers)
 
     # Add a delay to ensure the resource is deleted
     time.sleep(2)
 
     # Step 7: Verify the deletion
-    deleted_resources = get_url_resources(API_URL, headers)
+    deleted_resources = get_s3_resources(API_URL, headers)
     deleted_resource_info = next((res for res in deleted_resources if res['name'] == resource_name), None)
     assert deleted_resource_info is None
 
