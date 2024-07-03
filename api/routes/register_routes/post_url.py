@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from api.services.url_services.add_url import add_url
 from api.models.urlrequest_model import URLRequest
 from tenacity import RetryError
+from typing import Dict, Any
+
+from api.services.keycloak_services.get_current_user import get_current_user
 
 router = APIRouter()
 
@@ -30,7 +33,9 @@ router = APIRouter()
         }
     }
 )
-async def create_url_resource(data: URLRequest):
+async def create_url_resource(
+    data: URLRequest,
+    _: Dict[str, Any] = Depends(get_current_user)):
     """
     Add a URL resource to CKAN.
 
