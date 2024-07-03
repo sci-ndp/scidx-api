@@ -65,7 +65,7 @@ def put_kafka_datasource(api_url, dataset_id, update_data, headers):
 
 # Function to delete Kafka dataset from CKAN
 def delete_kafka_datasource(api_url, dataset_id, headers):
-    endpoint = f"{api_url}/kafka/{dataset_id}"
+    endpoint = f"{api_url}/dataset/{dataset_id}"
     response = requests.delete(endpoint, headers=headers)
 
     if response.status_code == 200:

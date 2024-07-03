@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends
-from api.services import kafka_services
+from api.services import default_services
 from tenacity import RetryError
 from typing import Dict, Any
 
@@ -8,7 +8,7 @@ from api.services.keycloak_services.get_current_user import get_current_user
 router = APIRouter()
 
 @router.delete(
-    "/kafka/{dataset_id}",
+    "/dataset/{dataset_id}",
     response_model=dict,
     status_code=status.HTTP_200_OK,
     summary="Delete a Kafka topic",
@@ -55,7 +55,7 @@ async def delete_kafka_datasource(
         If there is an error deleting the dataset, an HTTPException is raised with a detailed message.
     """
     try:
-        message = kafka_services.delete_kafka(dataset_id)
+        message = default_services.delete_dataset(dataset_id)
         return {"message": message}
     except RetryError as e:
         final_exception = e.last_attempt.exception()

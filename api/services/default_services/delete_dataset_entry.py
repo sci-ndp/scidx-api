@@ -8,9 +8,9 @@ from api.services.default_services import log_retry_attempt
     retry=retry_if_exception_type(Exception),
     after=log_retry_attempt
 )
-def delete_kafka(dataset_id):
+def delete_dataset(dataset_id):
     """
-    Delete a Kafka dataset by its ID.
+    Delete a dataset by its ID.
 
     Parameters
     ----------
@@ -33,4 +33,4 @@ def delete_kafka(dataset_id):
         ckan.action.package_delete(id=dataset_id)
         return "Dataset deleted successfully"
     except Exception as e:
-        raise Exception(f"Error deleting Kafka dataset: {str(e)}")
+        raise Exception(f"Error deleting dataset: {str(e)}")
