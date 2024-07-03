@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from api.models import OrganizationRequest
 from api.services import organization_services
 from tenacity import RetryError
+from typing import Dict, Any
+
+from api.services.keycloak_services.get_current_user import get_current_user
 
 router = APIRouter()
 
@@ -35,7 +38,9 @@ router = APIRouter()
         }
     }
 )
-async def create_organization_endpoint(org: OrganizationRequest):
+async def create_organization_endpoint(
+    org: OrganizationRequest,
+    _: Dict[str, Any] = Depends(get_current_user)):
     """
     Endpoint to create a new organization in CKAN.
 

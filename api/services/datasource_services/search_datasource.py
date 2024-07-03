@@ -5,6 +5,7 @@ from api.config.ckan_settings import ckan_settings
 from api.models import DataSourceResponse, Resource
 from api.services.default_services import log_retry_attempt
 
+
 @retry(
     wait=wait_exponential(multiplier=1, max=2),
     stop=stop_after_attempt(5),

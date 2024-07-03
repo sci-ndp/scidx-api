@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from api.services.s3_services.add_s3 import add_s3
 from api.models.s3request_model import S3Request
 from tenacity import RetryError
+from typing import Dict, Any
+
+from api.services.keycloak_services.get_current_user import get_current_user
 
 router = APIRouter()
 
@@ -30,7 +33,9 @@ router = APIRouter()
         }
     }
 )
-async def create_s3_resource(data: S3Request):
+async def create_s3_resource(
+    data: S3Request,
+    _: Dict[str, Any] = Depends(get_current_user)):
     """
     Add an S3 resource to CKAN.
 
