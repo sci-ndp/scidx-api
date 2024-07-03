@@ -11,11 +11,11 @@ router = APIRouter()
     "/dataset/{dataset_id}",
     response_model=dict,
     status_code=status.HTTP_200_OK,
-    summary="Delete a Kafka topic",
-    description="Delete a Kafka topic and its associated metadata from the system.",
+    summary="Delete a dataset",
+    description="Delete a dataset and its associated metadata from the system.",
     responses={
         200: {
-            "description": "Kafka dataset deleted successfully",
+            "description": "Dataset deleted successfully",
             "content": {
                 "application/json": {
                     "example": {"message": "Dataset deleted successfully"}
@@ -26,18 +26,18 @@ router = APIRouter()
             "description": "Bad Request",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Error deleting Kafka dataset: <error message>"}
+                    "example": {"detail": "Error deleting dataset: <error message>"}
                 }
             }
         }
     }
 )
-async def delete_kafka_datasource(
+async def delete_dataset_entry(
     dataset_id: str,
     _: Dict[str, Any] = Depends(get_current_user)
 ):
     """
-    Delete a Kafka topic and its associated metadata from the system.
+    Delete a dataset and its associated metadata from the system.
 
     Parameters
     ----------
