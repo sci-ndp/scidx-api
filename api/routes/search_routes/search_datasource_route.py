@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
+from typing import List, Optional, Union, Literal
 from api.services import datasource_services
 from api.models import DataSourceResponse
 from tenacity import RetryError
@@ -60,7 +60,8 @@ async def search_datasource(
     dataset_description: Optional[str] = Query(None, description="The description of the dataset."),
     resource_description: Optional[str] = Query(None, description="The description of the dataset resource."),
     resource_format: Optional[str] = Query(None, description="The format of the dataset resource."),
-    search_term: Optional[str] = Query(None, description="A term to search across all fields.")
+    search_term: Optional[str] = Query(None, description="A term to search across all fields."),
+    server: Optional[Literal['local', 'global']] = Query('local', description="Specify the server to search on: 'local' or 'global'.")
 ):
     """
     Endpoint to search by various parameters.
@@ -85,6 +86,8 @@ async def search_datasource(
         The format of the dataset resource.
     search_term : Optional[str]
         A term to search across all fields.
+    server : Optional[str]
+        Specify the server to search on: 'local' or 'global'.
 
     Returns
     -------
@@ -106,7 +109,8 @@ async def search_datasource(
             dataset_description=dataset_description,
             resource_description=resource_description,
             resource_format=resource_format,
-            search_term=search_term
+            search_term=search_term,
+            server=server
         )
         return results
     except RetryError as e:
