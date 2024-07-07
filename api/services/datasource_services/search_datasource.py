@@ -6,12 +6,12 @@ from api.models import DataSourceResponse, Resource
 from api.services.default_services import log_retry_attempt
 
 
-@retry(
-    wait=wait_exponential(multiplier=1, max=2),
-    stop=stop_after_attempt(5),
-    retry=retry_if_exception_type(Exception),
-    after=log_retry_attempt
-)
+# @retry(
+#     wait=wait_exponential(multiplier=1, max=2),
+#     stop=stop_after_attempt(5),
+#     retry=retry_if_exception_type(Exception),
+#     after=log_retry_attempt
+# )
 def search_datasource(
     dataset_name: Optional[str] = None,
     dataset_title: Optional[str] = None,
@@ -21,7 +21,8 @@ def search_datasource(
     dataset_description: Optional[str] = None,
     resource_description: Optional[str] = None,
     resource_format: Optional[str] = None,
-    search_term: Optional[str] = None  # Add search_term parameter
+    search_term: Optional[str] = None,  # Add search_term parameter,
+    server: Optional[str] = "local"
 ) -> List[DataSourceResponse]:
     """
     Search for datasets based on various parameters.
@@ -46,6 +47,8 @@ def search_datasource(
         The format of the dataset resource.
     search_term : Optional[str]
         A term to search across all fields.
+    server : Optional[str]
+        Specify the server to search on: 'local' or 'global'.
 
     Returns
     -------
@@ -57,7 +60,13 @@ def search_datasource(
     Exception
         If there is an error during the search.
     """
-    ckan = ckan_settings.ckan_no_api_key  # Use the no API key instance
+    if server not in ["local", "global"]:
+        raise Exception("Invalid server specified. Please specify 'local' or 'global'")
+
+    if server == "local":
+        ckan = ckan_settings.ckan_no_api_key  # Use the no API key instance
+    elif server == "global":
+        ckan = ckan_settings.ckan_global
     search_params = []
 
     if search_term:
