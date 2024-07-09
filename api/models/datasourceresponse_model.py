@@ -6,10 +6,10 @@ class Resource(BaseModel):
                     json_schema_extra={
                         "description": "The unique identifier of the resource.",
                         "example": "65d337da-9069-4731-953f-0de4b2e8560d"})
-    url: str = Field(...,
-                     json_schema_extra={
-                         "description": "The URL of the resource.",
-                         "example": "http://example.com/resource"})
+    url: Optional[str] = Field(...,
+                               json_schema_extra={
+                                   "description": "The URL of the resource.",
+                                   "example": "http://example.com/resource"})
     name: str = Field(...,
                       json_schema_extra={
                           "description": "The name of the resource.",

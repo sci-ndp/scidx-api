@@ -108,7 +108,7 @@ async def search_datasource(
             resource_name=resource_name,
             dataset_description=dataset_description,
             resource_description=resource_description,
-            resource_format=resource_format,
+            resource_format=resource_format.lower(),
             search_term=search_term,
             server=server
         )

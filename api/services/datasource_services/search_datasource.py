@@ -6,12 +6,12 @@ from api.models import DataSourceResponse, Resource
 from api.services.default_services import log_retry_attempt
 
 
-# @retry(
-#     wait=wait_exponential(multiplier=1, max=2),
-#     stop=stop_after_attempt(5),
-#     retry=retry_if_exception_type(Exception),
-#     after=log_retry_attempt
-# )
+@retry(
+    wait=wait_exponential(multiplier=1, max=2),
+    stop=stop_after_attempt(5),
+    retry=retry_if_exception_type(Exception),
+    after=log_retry_attempt
+)
 def search_datasource(
     dataset_name: Optional[str] = None,
     dataset_title: Optional[str] = None,
@@ -21,7 +21,7 @@ def search_datasource(
     dataset_description: Optional[str] = None,
     resource_description: Optional[str] = None,
     resource_format: Optional[str] = None,
-    search_term: Optional[str] = None,  # Add search_term parameter,
+    search_term: Optional[str] = None,
     server: Optional[str] = "local"
 ) -> List[DataSourceResponse]:
     """
