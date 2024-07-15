@@ -1,9 +1,10 @@
+import json
 from api.config.ckan_settings import ckan_settings
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from api.services.default_services import log_retry_attempt
 
 # Define a set of reserved keys that should not be used in the extras
-RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'collection', 'host', 'port', 'topic'}
+RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'collection', 'host', 'port', 'topic', 'mapping', 'processing'}
 
 @retry(
     wait=wait_exponential(multiplier=1, max=2),
@@ -11,7 +12,7 @@ RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'coll
     retry=retry_if_exception_type(Exception),
     after=log_retry_attempt
 )
-def add_kafka(dataset_name, dataset_title, owner_org, kafka_topic, kafka_host, kafka_port, dataset_description, extras=None):
+def add_kafka(dataset_name, dataset_title, owner_org, kafka_topic, kafka_host, kafka_port, dataset_description, extras=None, mapping=None, processing=None):
     """
     Add a Kafka topic and its associated metadata to the system.
 
@@ -33,6 +34,10 @@ def add_kafka(dataset_name, dataset_title, owner_org, kafka_topic, kafka_host, k
         A description of the dataset (default is an empty string).
     extras : dict, optional
         Additional metadata to be added to the dataset as extras (default is None).
+    mapping : dict, optional
+        Mapping information for the dataset (default is None).
+    processing : dict, optional
+        Processing information for the dataset (default is None).
 
     Returns
     -------
@@ -62,6 +67,12 @@ def add_kafka(dataset_name, dataset_title, owner_org, kafka_topic, kafka_host, k
         'topic': kafka_topic
     }
     
+    if mapping:
+        kafka_extras['mapping'] = json.dumps(mapping)
+    
+    if processing:
+        kafka_extras['processing'] = json.dumps(processing)
+
     extras_cleaned = extras.copy() if extras else {}
     extras_cleaned.update(kafka_extras)
     

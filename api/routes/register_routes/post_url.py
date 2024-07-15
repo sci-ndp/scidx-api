@@ -60,8 +60,11 @@ async def create_url_resource(
             resource_title=data.resource_title,
             owner_org=data.owner_org,
             resource_url=data.resource_url,
+            file_type=data.file_type,
             notes=data.notes,
-            extras=data.extras
+            extras=data.extras,
+            mapping=data.mapping,
+            processing=data.processing
         )
         return {"id": resource_id}
     except RetryError as e:

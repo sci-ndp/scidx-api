@@ -64,7 +64,9 @@ async def create_kafka_datasource(
             kafka_host=data.kafka_host,
             kafka_port=data.kafka_port,
             dataset_description=data.dataset_description,
-            extras=data.extras
+            extras=data.extras,
+            mapping=data.mapping,
+            processing=data.processing
         )
         return {"id": dataset_id}
     except RetryError as e:

@@ -1,19 +1,21 @@
+import json
 from api.config.ckan_settings import ckan_settings
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from api.services.default_services import log_retry_attempt
 
 # Define a set of reserved keys that should not be used in the extras
-RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'collection'}
+RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'collection', 'url', 'mapping', 'processing', 'file_type'}
 
 @retry(
-    wait=wait_exponential(multiplier=1, max=2),
+    wait=wait_exponential(multiplier=
+                          1, max=2),
     stop=stop_after_attempt(5),
     retry=retry_if_exception_type(Exception),
     after=log_retry_attempt
 )
 def add_url(
     resource_name, resource_title, owner_org,
-    resource_url, notes="", extras=None):
+    resource_url, file_type="",notes="", extras=None, mapping=None, processing=None):
     """
     Add a URL resource to CKAN.
 
@@ -31,6 +33,10 @@ def add_url(
         Additional notes about the resource (default is an empty string).
     extras : dict, optional
         Additional metadata to be added to the resource package as extras (default is None).
+    mapping : dict, optional
+        Mapping information for the dataset (default is None).
+    processing : dict, optional
+        Processing information for the dataset based on the file type (default is None).
 
     Returns
     -------
@@ -53,6 +59,19 @@ def add_url(
     if extras and RESERVED_KEYS.intersection(extras):
         raise KeyError(f"Extras contain reserved keys: {RESERVED_KEYS.intersection(extras)}")
 
+    url_extras = {
+        "file_type":file_type
+    }
+
+    if mapping:
+        url_extras['mapping'] = json.dumps(mapping)
+
+    if processing:
+        url_extras['processing'] = json.dumps(processing)
+
+    extras_cleaned = extras.copy() if extras else {}
+    extras_cleaned.update(url_extras)
+    
     ckan = ckan_settings.ckan
 
     try:
@@ -61,11 +80,9 @@ def add_url(
             'name': resource_name,
             'title': resource_title,
             'owner_org': owner_org,
-            'notes': notes
+            'notes': notes,
+            'extras': [{'key': k, 'value': v} for k, v in extras_cleaned.items()]
         }
-
-        if extras:
-            resource_package_dict['extras'] = [{'key': k, 'value': v} for k, v in extras.items()]
 
         resource_package = ckan.action.package_create(**resource_package_dict)
 

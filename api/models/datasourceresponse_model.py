@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 class Resource(BaseModel):
     id: str = Field(..., 
@@ -46,9 +46,9 @@ class DataSourceResponse(BaseModel):
     resources: List[Resource] = Field(...,
                                       json_schema_extra={
                                           "description": "A list of resources associated with the dataset."})
-    extras: Optional[Dict[str, str]] = Field(None, 
+    extras: Optional[Dict[str, Any]] = Field(None, 
                                              json_schema_extra={
                                                  "description": "Additional metadata associated with the dataset.",
-                                                 "example": {"key1": "value1", "key2": "value2"}})
+                                                 "example": {"key1": "value1", "key2": "value2", "mapping": {"field1": "qeadw2", "field2": "gw4aw34", "time": "gw4aw34"}, "processing": {"data_key": "", "info_key": "key_with_info"}}})
 
     model_config = ConfigDict(populate_by_name=True)
