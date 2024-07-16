@@ -13,7 +13,78 @@ router = APIRouter()
     response_model=dict,
     status_code=status.HTTP_201_CREATED,
     summary="Add a new URL resource",
-    description="Create a new URL resource in CKAN.",
+    description="""
+Create a new URL resource in CKAN.
+
+### Common Fields for All File Types
+- **resource_name**: The unique name of the resource to be created.
+- **resource_title**: The title of the resource to be created.
+- **owner_org**: The ID of the organization to which the resource belongs.
+- **resource_url**: The URL of the resource to be added.
+- **file_type**: The type of the file (`stream`, `CSV`, `TXT`, `JSON`, `NetCDF`).
+- **notes**: Additional notes about the resource (optional).
+- **extras**: Additional metadata to be added to the resource package as extras (optional).
+- **mapping**: Mapping information for the dataset (optional).
+- **processing**: Processing information for the dataset, which varies based on the `file_type`.
+
+### File Type-Specific Processing Information
+
+1. **Stream**
+    ```json
+    {
+        "refresh_rate": "5 seconds",
+        "data_key": "results"
+    }
+    ```
+    - **refresh_rate**: The refresh rate for the data stream.
+    - **data_key**: The key for the response data in the JSON file.
+
+2. **CSV**
+    ```json
+    {
+        "delimiter": ",",
+        "header_line": 1,
+        "start_line": 2,
+        "comment_char": "#"
+    }
+    ```
+    - **delimiter**: The delimiter used in the CSV file.
+    - **header_line**: The line number of the header in the CSV file.
+    - **start_line**: The line number where the data starts in the CSV file.
+    - **comment_char**: The character used for comments in the CSV file (optional).
+
+3. **TXT**
+    ```json
+    {
+        "delimiter": "\t",
+        "header_line": 1,
+        "start_line": 2
+    }
+    ```
+    - **delimiter**: The delimiter used in the TXT file.
+    - **header_line**: The line number of the header in the TXT file.
+    - **start_line**: The line number where the data starts in the TXT file.
+
+4. **JSON**
+    ```json
+    {
+        "info_key": "count",
+        "additional_key": "",
+        "data_key": "results"
+    }
+    ```
+    - **info_key**: The key for additional information in the JSON file (optional).
+    - **additional_key**: An additional key in the JSON file (optional).
+    - **data_key**: The key for the response data in the JSON file.
+
+5. **NetCDF**
+    ```json
+    {
+        "group": "group_name"
+    }
+    ```
+    - **group**: The group within the NetCDF file (optional).
+""",
     responses={
         201: {
             "description": "Resource created successfully",

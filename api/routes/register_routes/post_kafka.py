@@ -13,7 +13,46 @@ router = APIRouter()
     response_model=dict,
     status_code=status.HTTP_201_CREATED,
     summary="Add a new Kafka topic",
-    description="Add a Kafka topic and its associated metadata to the system.",
+    description="""
+Add a Kafka topic and its associated metadata to the system.
+
+### Required Fields
+- **dataset_name**: The unique name of the dataset to be created.
+- **dataset_title**: The title of the dataset to be created.
+- **owner_org**: The ID of the organization to which the dataset belongs.
+- **kafka_topic**: The Kafka topic name.
+- **kafka_host**: The Kafka host.
+- **kafka_port**: The Kafka port.
+- **dataset_description**: A description of the dataset (optional).
+- **extras**: Additional metadata to be added to the dataset as extras (optional).
+- **mapping**: Mapping information for the dataset. For selecting the desired fields to send and how they will be named (optional).
+- **processing**: Processing information for the dataset (optional).
+
+### Example Payload
+```json
+{
+    "dataset_name": "kafka_topic_example",
+    "dataset_title": "Kafka Topic Example",
+    "owner_org": "organization_id",
+    "kafka_topic": "example_topic",
+    "kafka_host": "kafka_host",
+    "kafka_port": "kafka_port",
+    "dataset_description": "This is an example Kafka topic registered as a system dataset.",
+    "extras": {
+        "key1": "value1",
+        "key2": "value2"
+    },
+    "mapping": {
+        "field1": "mapping1",
+        "field2": "mapping2"
+    },
+    "processing": {
+        "data_key": "data",
+        "info_key": "info"
+    }
+}
+```
+""",
     responses={
         201: {
             "description": "Kafka dataset created successfully",
