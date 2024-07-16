@@ -33,7 +33,7 @@ async def get_status():
         if ckan_is_active and keycloak_is_active:
             return "CKAN and Keycloak are active and reachable."
         else:
-            if ckan_is_active and keycloak_is_active:
+            if ckan_is_active and not keycloak_is_active:
                 raise HTTPException(status_code=503, detail="Keycloak is not reachable.")
             elif keycloak_is_active:
                 raise HTTPException(status_code=503, detail="CKAN is not reachable.")
