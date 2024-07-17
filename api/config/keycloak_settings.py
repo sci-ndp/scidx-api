@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from ckanapi import RemoteCKAN
 
 class Settings(BaseSettings):
     keycloak_url: str = "http://localhost:5000"
