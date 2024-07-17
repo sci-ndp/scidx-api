@@ -1,10 +1,10 @@
+import json
 from typing import List, Optional
 from ckanapi import NotFound
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from api.config.ckan_settings import ckan_settings
 from api.models import DataSourceResponse, Resource
 from api.services.default_services import log_retry_attempt
-
 
 @retry(
     wait=wait_exponential(multiplier=1, max=2),
@@ -97,7 +97,7 @@ def search_datasource(
                         (resource_url and resource.get('url') == resource_url) or
                         (resource_name and resource.get('name') == resource_name) or
                         (resource_description and resource.get('description') == resource_description) or
-                        (resource_format and resource.get('format') == resource_format)
+                        (resource_format and resource.get('format').lower() == resource_format)
                     ):
                         include_dataset = True
                         break
@@ -118,6 +118,12 @@ def search_datasource(
                 organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
 
                 extras = {extra['key']: extra['value'] for extra in dataset.get('extras', [])}
+
+                # Convert mapping and processing fields back to JSON
+                if 'mapping' in extras:
+                    extras['mapping'] = json.loads(extras['mapping'])
+                if 'processing' in extras:
+                    extras['processing'] = json.loads(extras['processing'])
 
                 results.append(DataSourceResponse(
                     id=dataset['id'],
