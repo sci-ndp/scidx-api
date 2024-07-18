@@ -25,7 +25,6 @@ def delete_organization(organization_name: str):
         # Delete all datasets associated with the organization
         datasets = ckan.action.package_search(fq=f'owner_org:{organization_id}', rows=1000)
         for dataset in datasets['results']:
-            ckan.action.dataset_delete(id=dataset['id'])
             ckan.action.dataset_purge(id=dataset['id'])
 
         # Delete the organization
