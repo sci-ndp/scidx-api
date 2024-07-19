@@ -1,7 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
+from typing import List
 from api.services.streaming_services.consumer import consume_kafka_data
 from api.config.kafka_settings import kafka_settings
+import logging
+from fastapi.responses import StreamingResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -33,7 +37,7 @@ async def get_kafka_stream(
     topic: str = Query(..., description="The Kafka topic to retrieve data from.")
 ):
     try:
-        async for data in consume_kafka_data(topic):
-            return data
+        return StreamingResponse(consume_kafka_data(topic), media_type="text/event-stream")
     except Exception as e:
+        logger.error(f"Error retrieving stream data: {e}")
         raise HTTPException(status_code=400, detail=str(e))
