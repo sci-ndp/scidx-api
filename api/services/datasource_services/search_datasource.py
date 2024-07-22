@@ -12,7 +12,7 @@ from api.services.default_services import log_retry_attempt
     retry=retry_if_exception_type(Exception),
     after=log_retry_attempt
 )
-def search_datasource(
+async def search_datasource(
     dataset_name: Optional[str] = None,
     dataset_title: Optional[str] = None,
     owner_org: Optional[str] = None,
@@ -24,42 +24,6 @@ def search_datasource(
     search_term: Optional[str] = None,
     server: Optional[str] = "local"
 ) -> List[DataSourceResponse]:
-    """
-    Search for datasets based on various parameters.
-
-    Parameters
-    ----------
-    dataset_name : Optional[str]
-        The name of the dataset.
-    dataset_title : Optional[str]
-        The title of the dataset.
-    owner_org : Optional[str]
-        The name of the organization.
-    resource_url : Optional[str]
-        The URL of the dataset resource.
-    resource_name : Optional[str]
-        The name of the dataset resource.
-    dataset_description : Optional[str]
-        The description of the dataset.
-    resource_description : Optional[str]
-        The description of the dataset resource.
-    resource_format : Optional[str]
-        The format of the dataset resource.
-    search_term : Optional[str]
-        A term to search across all fields.
-    server : Optional[str]
-        Specify the server to search on: 'local' or 'global'.
-
-    Returns
-    -------
-    List[DataSourceResponse]
-        A list of datasets that match the search criteria.
-
-    Raises
-    ------
-    Exception
-        If there is an error during the search.
-    """
     if server not in ["local", "global"]:
         raise Exception("Invalid server specified. Please specify 'local' or 'global'")
 

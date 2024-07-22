@@ -10,3 +10,7 @@ httpx
 tenacity
 cachetools
 uvicorn
+msgpack
+zstandard
+aiohttp
+pandas
