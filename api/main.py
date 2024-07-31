@@ -24,7 +24,7 @@ app.include_router(routes.default_router, include_in_schema=False)
 app.include_router(routes.register_router, tags=["Registration"])
 app.include_router(routes.search_router, tags=["Search"])
 app.include_router(routes.delete_router, tags=["Delete"])
-app.include_router(routes.token_router, prefix="/token", tags=["Token"])
+app.include_router(routes.token_router, tags=["Token"])
 app.include_router(routes.status_router, prefix="/status", tags=["Status"])
 
 
