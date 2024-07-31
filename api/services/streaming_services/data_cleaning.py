@@ -1,8 +1,9 @@
 import pandas as pd
 import json
 from aiokafka import AIOKafkaConsumer
+import asyncio
 import logging
-
+import time
 logger = logging.getLogger(__name__)
 
 CHUNK_SIZE = 10000
@@ -23,6 +24,8 @@ def apply_filters_vectorized(df, filter_semantics):
     if not filter_semantics:
         return df
 
+    logger.info("DataFrame before filtering:\n%s", df.head())  
+    
     for filter_condition in filter_semantics:
         try:
             if '>=' in filter_condition:
@@ -84,6 +87,7 @@ def apply_filters_vectorized(df, filter_semantics):
 
     return df
 
+
 async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data, loop):
     kafka_host = stream.extras['host']
     kafka_port = stream.extras['port']
@@ -94,31 +98,67 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
     consumer = AIOKafkaConsumer(
         kafka_topic,
         bootstrap_servers=f"{kafka_host}:{kafka_port}",
-        auto_offset_reset='earliest'
+        auto_offset_reset='earliest',
+        group_id=f"group_{kafka_topic}_{int(time.time())}"  # Ensure unique group to avoid offset issues
     )
     await consumer.start()
 
     try:
         start_time = loop.time()
+        last_send_time = time.time()  # Track the last time we sent data
         messages = []
+        logger.info('STARTING!')
 
-        async for message in consumer:
-            data = json.loads(message.value)
-            messages.append(data)
+        while True:
+            try:
+                message = await asyncio.wait_for(consumer.getone(), timeout=TIME_WINDOW)
+                logger.info(f"Received message: {message.value}")
+                data = json.loads(message.value)
+                messages.append(data)
+            except asyncio.TimeoutError:
+                logger.info("No new messages received in TIME_WINDOW")
 
             elapsed_time = loop.time() - start_time
-            if elapsed_time >= TIME_WINDOW or len(messages) >= CHUNK_SIZE:
+            time_since_last_send = time.time() - last_send_time
+
+            # Check if it's time to send the accumulated messages
+            if len(messages) >= CHUNK_SIZE or time_since_last_send >= TIME_WINDOW or elapsed_time >= TIME_WINDOW:
+                logger.info(f'SENDING {len(messages)} messages')
                 await process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
-                messages = []
+                messages = []  # Clear the messages list after sending
                 start_time = loop.time()
+                last_send_time = time.time()  # Reset the last send time
+
+            # Break the loop if no more messages are expected
+            if not messages and time_since_last_send >= TIME_WINDOW:
+                logger.info("No more messages to process, exiting loop")
+                break
+
+        # Process remaining messages if any after the consumer stops
+        if messages:
+            logger.info('FINAL SENDING')
+            logger.info(f"Processing {len(messages)} remaining messages before stopping consumer")
+            await process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
+
+    except Exception as e:
+        logger.error(f"Error in Kafka stream processing: {e}")
+
     finally:
-        await consumer.stop()
+        # Ensure consumer stops correctly
+        if not consumer._closed:
+            await consumer.stop()
         logger.info(f"Consumer stopped for Kafka stream: {kafka_topic}")
+
+
 
 async def process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
     async with buffer_lock:
         df = pd.DataFrame(messages)
+        logger.info("DataFrame before filtering:\n%s", df.head())
         mapped_data = mapped_values_vectorized(mapping, df)
         filtered_data = apply_filters_vectorized(mapped_data, filter_semantics)
         if not filtered_data.empty:
+            logger.info("Filtered DataFrame:\n%s", filtered_data.head())
             await send_data(filtered_data, stream, loop)
+        else:
+            logger.info("No data after filtering")

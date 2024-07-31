@@ -55,6 +55,11 @@ def add_kafka(dataset_name, dataset_title, owner_org, kafka_topic, kafka_host, k
         exception is raised with a detailed message.
     """
     
+    if isinstance(kafka_port, str) and kafka_port.isdigit():
+        kafka_port = int(kafka_port)
+    elif not isinstance(kafka_port, int):
+        raise ValueError(f"kafka_port must be an integer, got {type(kafka_port)}")
+    
     if not isinstance(extras, (dict, type(None))):
         raise ValueError("Extras must be a dictionary or None.")
 
