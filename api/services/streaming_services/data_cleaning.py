@@ -24,7 +24,7 @@ def apply_filters_vectorized(df, filter_semantics):
     if not filter_semantics:
         return df
 
-    logger.info("DataFrame before filtering:\n%s", df.head())  
+    # logger.info("DataFrame before filtering:\n%s", df.head())  
     
     for filter_condition in filter_semantics:
         try:
@@ -107,12 +107,12 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
         start_time = loop.time()
         last_send_time = time.time()  # Track the last time we sent data
         messages = []
-        logger.info('STARTING!')
+        # logger.info('STARTING!')
 
         while True:
             try:
                 message = await asyncio.wait_for(consumer.getone(), timeout=TIME_WINDOW)
-                logger.info(f"Received message: {message.value}")
+                # logger.info(f"Received message: {message.value}")
                 data = json.loads(message.value)
                 messages.append(data)
             except asyncio.TimeoutError:
@@ -123,7 +123,7 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
 
             # Check if it's time to send the accumulated messages
             if len(messages) >= CHUNK_SIZE or time_since_last_send >= TIME_WINDOW or elapsed_time >= TIME_WINDOW:
-                logger.info(f'SENDING {len(messages)} messages')
+                # logger.info(f'SENDING {len(messages)} messages')
                 await process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
                 messages = []  # Clear the messages list after sending
                 start_time = loop.time()
@@ -131,13 +131,13 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
 
             # Break the loop if no more messages are expected
             if not messages and time_since_last_send >= TIME_WINDOW:
-                logger.info("No more messages to process, exiting loop")
+                # logger.info("No more messages to process, exiting loop")
                 break
 
         # Process remaining messages if any after the consumer stops
         if messages:
-            logger.info('FINAL SENDING')
-            logger.info(f"Processing {len(messages)} remaining messages before stopping consumer")
+            # logger.info('FINAL SENDING')
+            # logger.info(f"Processing {len(messages)} remaining messages before stopping consumer")
             await process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
 
     except Exception as e:
@@ -147,18 +147,19 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
         # Ensure consumer stops correctly
         if not consumer._closed:
             await consumer.stop()
-        logger.info(f"Consumer stopped for Kafka stream: {kafka_topic}")
+        # logger.info(f"Consumer stopped for Kafka stream: {kafka_topic}")
 
 
 
 async def process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
     async with buffer_lock:
         df = pd.DataFrame(messages)
-        logger.info("DataFrame before filtering:\n%s", df.head())
+        # logger.info("DataFrame before filtering:\n%s", df.head())
         mapped_data = mapped_values_vectorized(mapping, df)
         filtered_data = apply_filters_vectorized(mapped_data, filter_semantics)
         if not filtered_data.empty:
-            logger.info("Filtered DataFrame:\n%s", filtered_data.head())
+            # logger.info("Filtered DataFrame:\n%s", filtered_data.head())
             await send_data(filtered_data, stream, loop)
         else:
-            logger.info("No data after filtering")
+            pass
+            # logger.info("No data after filtering")
