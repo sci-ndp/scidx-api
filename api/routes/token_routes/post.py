@@ -8,7 +8,7 @@ from api.config import keycloak_settings
 router = APIRouter()
 
 
-@router.post("/",
+@router.post("/token",
     response_model=Token,
     responses={
         200: {
@@ -19,7 +19,7 @@ router = APIRouter()
         }
     },
     summary="Retrieve an access token given the username and password.")
-def login_for_access_token(
+async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends()):
     try:
         keycloak_token = get_user_token(
