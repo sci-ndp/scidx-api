@@ -100,7 +100,7 @@ async def search_datasource(
         If there is an error searching for the datasets, an HTTPException is raised with a detailed message.
     """
     try:
-        results = datasource_services.search_datasource(
+        results = await datasource_services.search_datasource(
             dataset_name=dataset_name,
             dataset_title=dataset_title,
             owner_org=owner_org,
