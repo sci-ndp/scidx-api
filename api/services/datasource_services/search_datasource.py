@@ -31,6 +31,7 @@ async def search_datasource(
         ckan = ckan_settings.ckan_no_api_key  # Use the no API key instance
     elif server == "global":
         ckan = ckan_settings.ckan_global
+
     search_params = []
 
     if search_term:
@@ -53,52 +54,57 @@ async def search_datasource(
         results = []
 
         for dataset in datasets['results']:
-            include_dataset = False
-            if resource_url or resource_name or resource_description or resource_format:
-                resources = dataset.get('resources', [])
-                for resource in resources:
-                    if (
-                        (resource_url and resource.get('url') == resource_url) or
-                        (resource_name and resource.get('name') == resource_name) or
-                        (resource_description and resource.get('description') == resource_description) or
-                        (resource_format and resource.get('format').lower() == resource_format)
-                    ):
-                        include_dataset = True
-                        break
-            else:
-                include_dataset = True
+            # Convert the dataset to a string representation
+            dataset_str = json.dumps(dataset, default=str).lower()
 
-            if include_dataset:
-                resources_list = [
-                    Resource(
-                        id=res['id'],
-                        url=res['url'],
-                        name=res['name'],
-                        description=res.get('description'),
-                        format=res.get('format')
-                    ) for res in dataset.get('resources', [])
-                ]
+            # Check if all search params are present in the dataset string
+            if all(param.lower() in dataset_str for param in search_params):
+                include_dataset = False
+                if resource_url or resource_name or resource_description or resource_format:
+                    resources = dataset.get('resources', [])
+                    for resource in resources:
+                        if (
+                            (resource_url and resource.get('url') == resource_url) or
+                            (resource_name and resource.get('name') == resource_name) or
+                            (resource_description and resource.get('description') == resource_description) or
+                            (resource_format and resource.get('format').lower() == resource_format)
+                        ):
+                            include_dataset = True
+                            break
+                else:
+                    include_dataset = True
 
-                organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
+                if include_dataset:
+                    resources_list = [
+                        Resource(
+                            id=res['id'],
+                            url=res['url'],
+                            name=res['name'],
+                            description=res.get('description'),
+                            format=res.get('format')
+                        ) for res in dataset.get('resources', [])
+                    ]
 
-                extras = {extra['key']: extra['value'] for extra in dataset.get('extras', [])}
+                    organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
 
-                # Convert mapping and processing fields back to JSON
-                if 'mapping' in extras:
-                    extras['mapping'] = json.loads(extras['mapping'])
-                if 'processing' in extras:
-                    extras['processing'] = json.loads(extras['processing'])
+                    extras = {extra['key']: extra['value'] for extra in dataset.get('extras', [])}
 
-                results.append(DataSourceResponse(
-                    id=dataset['id'],
-                    name=dataset['name'],
-                    title=dataset['title'],
-                    owner_org=organization_name,
-                    description=dataset.get('notes'),
-                    resources=resources_list,
-                    extras=extras
-                ))
-        
+                    # Convert mapping and processing fields back to JSON
+                    if 'mapping' in extras:
+                        extras['mapping'] = json.loads(extras['mapping'])
+                    if 'processing' in extras:
+                        extras['processing'] = json.loads(extras['processing'])
+
+                    results.append(DataSourceResponse(
+                        id=dataset['id'],
+                        name=dataset['name'],
+                        title=dataset['title'],
+                        owner_org=organization_name,
+                        description=dataset.get('notes'),
+                        resources=resources_list,
+                        extras=extras
+                    ))
+
         return results
 
     except NotFound:
