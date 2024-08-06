@@ -1,6 +1,8 @@
 import logging
 import asyncio
 import json
+
+from fastapi import HTTPException
 from api.models.request_stream_model import ProducerPayload
 from .consumer import consume_kafka_data
 from .producer import Producer
@@ -43,7 +45,7 @@ async def create_stream(payload: ProducerPayload):
     logger.info("Filtered Streams: %s", filtered_streams)
 
     if not filtered_streams:
-        raise ValueError("No data streams found matching the criteria.")
+        raise HTTPException(status_code=404, detail="No data streams found matching the criteria.")
 
     producer = Producer(payload.filter_semantics, filtered_streams)
     asyncio.create_task(producer.run())

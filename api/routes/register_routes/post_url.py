@@ -31,7 +31,7 @@ Create a new URL resource in CKAN.
 
 1. **Stream**
     ```json
-    {
+    "processing": {
         "refresh_rate": "5 seconds",
         "data_key": "results"
     }
@@ -41,7 +41,7 @@ Create a new URL resource in CKAN.
 
 2. **CSV**
     ```json
-    {
+    "processing": {
         "delimiter": ",",
         "header_line": 1,
         "start_line": 2,
@@ -55,7 +55,7 @@ Create a new URL resource in CKAN.
 
 3. **TXT**
     ```json
-    {
+    "processing": {
         "delimiter": "\t",
         "header_line": 1,
         "start_line": 2
@@ -67,7 +67,7 @@ Create a new URL resource in CKAN.
 
 4. **JSON**
     ```json
-    {
+    "processing": {
         "info_key": "count",
         "additional_key": "",
         "data_key": "results"
@@ -79,7 +79,7 @@ Create a new URL resource in CKAN.
 
 5. **NetCDF**
     ```json
-    {
+    "processing": {
         "group": "group_name"
     }
     ```
