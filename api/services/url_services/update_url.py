@@ -96,9 +96,6 @@ async def update_url(
     return {"message": "Resource updated successfully"}
 
 
-
-
-
 def validate_manual_processing_info(file_type: str, processing: dict):
     """
     Manually validate the processing information based on the file type.

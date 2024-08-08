@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Producer:
     def __init__(self, filter_semantics, data_streams):
         self.data_stream_id = str(uuid4())
-        self.data_streams = [stream for stream in data_streams if stream.extras.get('mapping')]
+        self.data_streams = data_streams
         self.filter_semantics = filter_semantics
         self.stop_event = asyncio.Event()
         self.executor = ThreadPoolExecutor(max_workers=10)

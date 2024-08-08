@@ -1,4 +1,3 @@
-
 import json
 from api.config.ckan_settings import ckan_settings
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
