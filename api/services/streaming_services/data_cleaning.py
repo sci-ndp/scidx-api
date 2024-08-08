@@ -12,13 +12,18 @@ TIME_WINDOW = 10  # seconds
 
 def mapped_values_vectorized(mapping, df):
     result = pd.DataFrame(index=df.index)
-    for key, path in mapping.items():
-        if path in df.columns:
-            if 'timestamp' in key.lower():
-                result[key] = pd.to_datetime(df[path], errors='coerce').dt.strftime('%Y-%m-%dT%H:%M:%SZ')
-            else:
-                result[key] = df[path]
+    
+    if mapping is None:
+        result = df.copy()  # If no mapping is provided, include all columns
+    else:
+        for key, path in mapping.items():
+            if path in df.columns:
+                if 'timestamp' in key.lower():
+                    result[key] = pd.to_datetime(df[path], errors='coerce').dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+                else:
+                    result[key] = df[path]
     return result
+
 
 def apply_filters_vectorized(df, filter_semantics):
     if not filter_semantics:
@@ -92,7 +97,7 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
     kafka_host = stream.extras['host']
     kafka_port = stream.extras['port']
     kafka_topic = stream.extras['topic']
-    mapping = stream.extras['mapping']
+    mapping = stream.extras.get('mapping')
     processing = stream.extras.get('processing', {})
     data_key = processing.get('data_key', None)
     info_key = processing.get('info_key', None)
