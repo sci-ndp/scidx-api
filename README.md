@@ -1,43 +1,9 @@
-# sciDX API
+sciDX API is a RESTful API built with FastAPI. It is one of the components of the sciDX stack, which provides comprehensive solutions for managing and accessing scientific data. This API facilitates the management of datasets, metadata, and integration with various data sources like Object Stores, URLs, and Kafka streams.
 
-sciDX API is a RESTful API built with FastAPI. It is one of the components of the sciDX stack.
-    
-```mermaid
-flowchart TD
-    %% Define styles for better visibility
-    classDef redStroke stroke:#ff0000,stroke-width:4px;
+As part of a team of scientists managing large volumes of experimental data, you can use the sciDX API to efficiently handle these data by linking them to a CKAN instance. Subsequently, once the data is registered in our system, you can work with them using the functionalities provided by the endpoints. This facilitates the efficient organization and manipulation of extensive scientific data collections.
 
-    %% Define the main elements
-    user(User)
-    python1[Python <br/> scidx]
-    python2[Python <br/> scidx_tools]
-    scidx_api[sciDX API]
-    keycloak[Keycloak]
-    ckan1[CKAN <br/> Global]
-    ckan2[CKAN]
+Please note that this API is a work in progress, with a new release scheduled every month until our goals are achieved.
 
-    %% Define the connections
-    user <--> python1
-    user <--> python2
-    user <--> scidx_api
-    python1 --> python2
-    python1 <--> scidx_api
-    python2 --> scidx_api
-    scidx_api <--> keycloak
-    scidx_api <--> ckan1
-    scidx_api <--> ckan2
-
-    %% Group related nodes in a subgraph
-    subgraph sciDX Stack
-        direction TB
-        python1
-        python2
-        scidx_api
-    end
-
-    %% Apply styles to specific nodes
-    class scidx_api redStroke;
-```
 ![scidx-api](/docs/images/scidx-api.excalidraw.png)
 
 ## Table of Contents
