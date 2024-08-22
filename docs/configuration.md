@@ -7,6 +7,7 @@ The application uses environment variables for configuration. You need to create
 1. `.env_ckan`
 2. `.env_swagger`
 3. `.env_keycloak`
+4. `.env_dxspaces`
 
 ### .env_ckan
 
@@ -56,6 +57,15 @@ CLIENT_SECRET=your-client-secret
 - `CLIENT_ID`: The client ID for your application.
 - `CLIENT_SECRET`: The client secret for your application.
 
+### .env_dxspaces
+This file contains the configuration for connecting to your DXSpaces instance.
+```
+DXSPACES_URL=http://your-dxspaces-instance-url
+DXSPACES_REGISTRATION=all|<comma-separted list of source types>|none
+```
+
+- `DXSPACES_URL`: The URL of your DXSpaces instance.
+- `DXSPACES_REGISTRATION`: Which classes registrations are propagated to DataSpaces.
 
 ## Additional Configuration
 
