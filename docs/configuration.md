@@ -2,7 +2,7 @@
 
 ## Environment Variables
 
-The application uses environment variables for configuration. You need to create two `.env` files in the `env_variables` directory:
+The application uses environment variables for configuration. You need to create three `.env` files in the `env_variables` directory:
 
 1. `.env_ckan`
 2. `.env_swagger`
