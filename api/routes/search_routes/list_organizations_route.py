@@ -23,7 +23,8 @@ router = APIRouter()
             "description": "Bad Request",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Error message explaining the bad request"}
+                    "example": {
+                        "detail": "Error message explaining the bad request"}
                 }
             }
         }
