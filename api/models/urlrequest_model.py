@@ -1,6 +1,8 @@
-from pydantic import BaseModel, Field, root_validator, ValidationError
-from typing import Dict, Optional, Union, Any
 from enum import Enum
+from typing import Any, Dict, Optional
+
+from pydantic import BaseModel, Field, ValidationError, model_validator
+
 
 # Define an enumeration for file types
 class FileTypeEnum(str, Enum):
@@ -9,6 +11,7 @@ class FileTypeEnum(str, Enum):
     TXT = "TXT"
     JSON = "JSON"
     NetCDF = "NetCDF"
+
 
 # Define processing info models for each file type
 class StreamProcessingInfo(BaseModel):
@@ -22,6 +25,7 @@ class StreamProcessingInfo(BaseModel):
         description="The key for the response data in the JSON file.",
         json_schema_extra={"example": "results"},
     )
+
 
 class CSVProcessingInfo(BaseModel):
     delimiter: str = Field(
@@ -45,11 +49,12 @@ class CSVProcessingInfo(BaseModel):
         json_schema_extra={"example": "#"},
     )
 
+
 class TXTProcessingInfo(BaseModel):
     delimiter: str = Field(
         ...,
         description="The delimiter used in the TXT file.",
-        json_schema_extra={"example": "\t"},
+        json_schema_extra={"example": "\\t"},
     )
     header_line: int = Field(
         ...,
@@ -62,6 +67,7 @@ class TXTProcessingInfo(BaseModel):
         json_schema_extra={"example": 2},
     )
 
+
 class JSONProcessingInfo(BaseModel):
     info_key: Optional[str] = Field(
         None,
@@ -71,7 +77,7 @@ class JSONProcessingInfo(BaseModel):
     additional_key: Optional[str] = Field(
         None,
         description="An additional key in the JSON file.",
-        json_schema_extra={"example": ""},
+        json_schema_extra={"example": "metadata"},
     )
     data_key: Optional[str] = Field(
         None,
@@ -79,12 +85,14 @@ class JSONProcessingInfo(BaseModel):
         json_schema_extra={"example": "results"},
     )
 
+
 class NetCDFProcessingInfo(BaseModel):
     group: Optional[str] = Field(
         None,
         description="The group within the NetCDF file.",
         json_schema_extra={"example": "group_name"},
     )
+
 
 # Define the main request model
 class URLRequest(BaseModel):
@@ -108,67 +116,68 @@ class URLRequest(BaseModel):
         description="The URL of the resource to be added.",
         json_schema_extra={"example": "http://example.com/resource"},
     )
-    file_type: Optional[FileTypeEnum] = Field(
+    file_type: FileTypeEnum = Field(
         ...,
-        description="The type of the file (e.g., stream, CSV, TXT, JSON, NetCDF).",
+        description=(
+            "The type of the file. "
+            "Valid options are: stream, CSV, TXT, JSON, NetCDF."
+        ),
         json_schema_extra={"example": "CSV"},
     )
-    notes: str = Field(
-        "",
+    notes: Optional[str] = Field(
+        None,
         description="Additional notes about the resource.",
-        json_schema_extra={"example": "Additional notes about the resource."},
+        json_schema_extra={"example": "Some additional notes about the resource."},
     )
     extras: Optional[Dict[str, str]] = Field(
         None,
-        description="Additional metadata to be added to the resource package as extras.",
+        description=(
+            "Additional metadata to be added to the resource package as extras."
+        ),
         json_schema_extra={"example": {"key1": "value1", "key2": "value2"}},
     )
     mapping: Optional[Dict[str, str]] = Field(
         None,
         description="Mapping information for the dataset.",
-        json_schema_extra={"example": {"field1": "mapping1", "field2": "mapping2"}},
+        json_schema_extra={
+            "example": {"field1": "mapping1", "field2": "mapping2"}
+        },
     )
     processing: Optional[Dict[str, Any]] = Field(
         None,
         description="Processing information for the dataset.",
-        json_schema_extra={"example": {"data_key": "data", "info_key": "info"}},
+        json_schema_extra={
+            "example": {"data_key": "data", "info_key": "info"}
+        },
     )
 
-    @root_validator(pre=True)
-    def check_processing(cls, values):
-        file_type = values.get('file_type')
-        processing = values.get('processing')
+    @model_validator(mode="before")
+    def validate_processing(cls, values):
+        file_type = values.get("file_type")
+        processing = values.get("processing")
 
-        if file_type == "stream":
-            try:
-                StreamProcessingInfo(**processing)
-            except ValidationError as e:
-                raise ValueError(
-                    f"Invalid processing info for file_type 'stream': {e}"
-                )
-        elif file_type == "CSV":
-            try:
-                CSVProcessingInfo(**processing)
-            except ValidationError as e:
-                raise ValueError(f"Invalid processing info for file_type 'CSV': {e}")
-        elif file_type == "TXT":
-            try:
-                TXTProcessingInfo(**processing)
-            except ValidationError as e:
-                raise ValueError(f"Invalid processing info for file_type 'TXT': {e}")
-        elif file_type == "JSON":
-            try:
-                JSONProcessingInfo(**processing)
-            except ValidationError as e:
-                raise ValueError(f"Invalid processing info for file_type 'JSON': {e}")
-        elif file_type == "NetCDF":
-            try:
-                NetCDFProcessingInfo(**processing)
-            except ValidationError as e:
-                raise ValueError(
-                    f"Invalid processing info for file_type 'NetCDF': {e}"
-                )
-        else:
+        if processing is None:
+            raise ValueError(
+                f"Processing information must be provided for file_type '{file_type}'."
+            )
+
+        processing_validators = {
+            FileTypeEnum.stream: StreamProcessingInfo,
+            FileTypeEnum.CSV: CSVProcessingInfo,
+            FileTypeEnum.TXT: TXTProcessingInfo,
+            FileTypeEnum.JSON: JSONProcessingInfo,
+            FileTypeEnum.NetCDF: NetCDFProcessingInfo,
+        }
+
+        validator = processing_validators.get(file_type)
+        if not validator:
             raise ValueError(f"Unsupported file_type: {file_type}")
+
+        try:
+            validator(**processing)
+        except ValidationError as e:
+            raise ValueError(
+                f"Invalid processing info for file_type '{file_type}': {e}"
+            ) from e
 
         return values
