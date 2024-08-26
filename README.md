@@ -29,31 +29,17 @@ Using Keycloak, the API manages user authentication and authorization, providing
 ### 4. URL Ingestion and Management
 The API supports data ingestion through URLs, allowing for dynamic management and updating of external data sources.
 
-## Usage Example
+## Installation
 
-Here’s a basic example of how to interact with the sciDX API using `curl`:
-
-```bash
-# Authenticate with Keycloak and obtain a token
-curl -X POST "https://your-auth-server/token" -d 'client_id=your-client-id&client_secret=your-client-secret&grant_type=client_credentials'
-
-# Submit a dataset to CKAN via the API
-curl -X POST "https://your-api-server/api/datasets" -H "Authorization: Bearer your-token" -d '{"name": "example-dataset", "url": "https://example.com/data.csv"}'
-```
-
-## Documentation
-
-For more details on installing, configuring, and using the sciDX API, refer to the following documents:
-
-- [Installation](docs/installation.md)
-- [Configuration](docs/configuration.md)
-- [Usage](docs/usage.md)
-- [Testing](docs/testing.md)
-- [Contributing](docs/contributing.md)
+For detailed instructions on installing, configuring, and accessing the sciDX API, please see the [Installation Guide](docs/installation.md).
 
 ## Contributing
 
 Contributions are welcome. Please review our [Contributing Guide](docs/contributing.md) for more details.
+
+## Testing
+
+All tests are designed to run with *pytest*. Before submitting new contributions, please ensure that all existing tests pass successfully. Additionally, for any new features or functionalities introduced, create appropriate tests without modifying the existing ones. This helps maintain the integrity and reliability of the API.
 
 ## License
 
