@@ -1,59 +1,85 @@
-# Installation
+## Installation
 
-## Prerequisites
+Follow these steps to install and set up the sciDX API on your local machine:
 
-- Python 3.10 or higher
-- virtualenv (optional but recommended)
-- An instance of [CKAN](https://github.com/ckan/ckan-docker.git) installed and running. [Official documentation](https://docs.ckan.org/en/2.10/maintaining/installing/index.html).
-- (Optional) An other instance of [CKAN](https://github.com/ckan/ckan-docker.git) installed and running, which works as the "global CKAN".
-- An instance of [Keycloak](https://www.keycloak.org/) installed and running. We are using the docker [quay.io/keycloak/keycloak:25.0.1](https://www.keycloak.org/getting-started/getting-started-docker).
+### Prerequisites
 
-## Steps
+Make sure you have the following installed on your system:
 
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/sci-ndp/scidx-api.git
-    cd scidx-api
-    ```
+- **Python 3.8+**
+- **Docker** and **Docker Compose**(if you plan to use the Docker setup). 
+- **Git**
+- *CKAN*, we are using the [Docker Compose setup for CKAN](https://github.com/ckan/ckan-docker).
+- *Keycloak*, we are using the [official Keycloak on Docker tutorial].(https://www.keycloak.org/getting-started/getting-started-docker), with the version ```quay.io/keycloak/keycloak:25.0.4```.
 
-2. Create a virtual environment and activate it:
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
-    ```
+### Clone the Repository
 
-3. Install the dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+Clone the sciDX API repository from GitHub:
 
-4. Create a `env_variables` directory in the root of the project.
+```bash
+git clone https://github.com/your-username/scidx-api.git
+cd scidx-api
+```
 
-5. Create a `.env_ckan` file in the `env_variables` directory with the following content:
-    ```env
-    CKAN_URL=http://your-ckan-instance-url
-    CKAN_API_KEY=your-ckan-api-key
-    CKAN_GLOBAL_URL=http://global-ckan-instance-url
-    ```
+### Environment Configuration
 
-6. Create a `.env_swagger` file in the `env_variables` directory with the following content:
-    ```env
-    SWAGGER_TITLE=sciDX REST API
-    SWAGGER_DESCRIPTION=API documentation
-    SWAGGER_VERSION=0.1.0
-    ```
+1. Copy the example environment files and adjust the configuration as needed:
 
-7. Create a `.env_keycloak` file in the `env_variables` directory with the following content:
-    ```env
-    KEYCLOAK_URL=http://your-keycloak-instance-url
-    KEYCLOAK_ADMIN_USERNAME=your-admin-username
-    KEYCLOAK_ADMIN_PASSWORD=your-admin-password
-    REALM_NAME=your-realm-name
-    CLIENT_ID=your-client-id
-    CLIENT_SECRET=your-client-secret
+   ```bash
+   cp ./env_variables/.env_ckan.example ./env_variables/.env_ckan
+   cp ./env_variables/.env_keycloak.example ./env_variables/.env_keycloak
+   cp ./env_variables/.env_swagger.example ./env_variables/.env_swagger
 
-    ```
+   ```
 
-8. After finishing the installation and making sure everything is working please go to [configuration](../docs/configuration.md).
+2. Edit the `.env` files to match your local environment or deployment needs.
 
-[Return to README.md](../README.md)
+### Install Dependencies
+
+#### Option 1: Using Virtual Environment
+
+1. Create and activate a virtual environment:
+
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate   # On Windows use `venv\Scripts\activate`
+   ```
+
+2. Install the required Python packages:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+#### Option 2: Using Docker
+
+1. Build and start the Docker containers:
+
+   ```bash
+   docker-compose up --build
+   ```
+
+### Running the Application
+
+Start the application using one of the following methods:
+
+- **With Virtual Environment**:
+
+  ```bash
+  uvicorn api.main:app --reload
+  ```
+
+- **With Docker**:
+
+  ```bash
+  docker-compose up
+  ```
+
+### Accessing the API
+
+Once the application is running, you can access the sciDX API at:
+
+- **Local environment**: `http://127.0.0.1:8000`
+- **Docker environment**: `http://localhost:8000`
+
+Return to [README](../README.md).

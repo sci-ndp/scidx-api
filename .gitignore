@@ -163,6 +163,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-env_variables/
 env_variables/.env_ckan
 env_variables/.env_keycloak
+env_variables/.env_swagger
