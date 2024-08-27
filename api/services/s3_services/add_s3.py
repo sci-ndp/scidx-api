@@ -1,6 +1,10 @@
-from api.config.ckan_settings import ckan_settings
+from api.config import ckan_settings, dxspaces_settings 
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from api.services.default_services import log_retry_attempt
+
+import dxspaces
+import json
+from urllib.parse import urlparse
 
 # Define a set of reserved keys that should not be used in the extras
 RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'collection'}
@@ -52,6 +56,15 @@ def add_s3(
 
     if extras and RESERVED_KEYS.intersection(extras):
         raise KeyError(f"Extras contain reserved keys: {RESERVED_KEYS.intersection(extras)}")
+
+    if dxspaces_settings.registration_methods['s3']:
+        dxspaces = dxspaces_settings.dxspaces
+        url = urlparse(resource_s3)
+        staging_params = {'bucket': url.netloc, 'path': url.path[1:]}
+        if not extras:
+            extras = {}
+        staging_handle = dxspaces.Register('s3nc', resource_name, staging_params)
+        extras['staging_handle'] = json.dumps(staging_handle)
 
     ckan = ckan_settings.ckan
 
