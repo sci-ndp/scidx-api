@@ -3,7 +3,6 @@ from api.services.s3_services.add_s3 import add_s3
 from api.models.s3request_model import S3Request
 from tenacity import RetryError
 from typing import Dict, Any
-
 from api.services.keycloak_services.get_current_user import get_current_user
 
 router = APIRouter()
@@ -19,7 +18,9 @@ router = APIRouter()
             "description": "Resource created successfully",
             "content": {
                 "application/json": {
-                    "example": {"id": "12345678-abcd-efgh-ijkl-1234567890ab"}
+                    "example": {
+                        "id": "12345678-abcd-efgh-ijkl-1234567890ab"
+                    }
                 }
             }
         },
@@ -27,7 +28,9 @@ router = APIRouter()
             "description": "Bad Request",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Error creating resource: <error message>"}
+                    "example": {
+                        "detail": "Error creating resource: <error message>"
+                    }
                 }
             }
         }
@@ -35,24 +38,28 @@ router = APIRouter()
 )
 async def create_s3_resource(
     data: S3Request,
-    _: Dict[str, Any] = Depends(get_current_user)):
+    _: Dict[str, Any] = Depends(get_current_user)
+):
     """
     Add an S3 resource to CKAN.
 
     Parameters
     ----------
     data : S3Request
-        An object containing all the required parameters for creating an S3 resource.
+        An object containing all the required parameters for creating an 
+        S3 resource.
 
     Returns
     -------
     dict
-        A dictionary containing the ID of the created resource if successful.
+        A dictionary containing the ID of the created resource if 
+        successful.
 
     Raises
     ------
     HTTPException
-        If there is an error creating the resource, an HTTPException is raised with a detailed message.
+        If there is an error creating the resource, an HTTPException is 
+        raised with a detailed message.
     """
     try:
         resource_id = add_s3(
