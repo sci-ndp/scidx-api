@@ -1,9 +1,7 @@
 from fastapi import APIRouter, HTTPException
-from enum import Enum
 from api.services import dataset_services
 
 router = APIRouter()
-
 
 @router.delete(
     "/{resource_name}",
@@ -23,7 +21,9 @@ router = APIRouter()
             "description": "Bad Request",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Error message explaining the bad request"}
+                    "example": {
+                        "detail": "Error message explaining the bad request"
+                    }
                 }
             }
         },
@@ -54,7 +54,8 @@ async def delete_resource(resource_name: str):
     Raises
     ------
     HTTPException
-        If there is an error deleting the resource, an HTTPException is raised with a detailed message.
+        If there is an error deleting the resource, an HTTPException is 
+        raised with a detailed message.
     """
     try:
         dataset_services.delete_dataset(resource_name)

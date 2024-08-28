@@ -11,7 +11,7 @@ def generate_random_org_name():
 
 def test_create_and_delete_organization():
     org_name = generate_random_org_name()
-    
+
     headers = {
         "Authorization": f"Bearer {keycloak_settings.test_token}"
     }
