@@ -24,10 +24,10 @@ def test_create_and_delete_kafka_resource_with_org():
         "title": "Test Organization",
         "description": "This is a test organization."
     }
-    
+
     create_org_response = client.post("/organization", json=org_payload, headers=headers)
     assert create_org_response.status_code == 201
-    
+
     create_org_data = create_org_response.json()
     assert "id" in create_org_data
 
@@ -53,10 +53,10 @@ def test_create_and_delete_kafka_resource_with_org():
             "info_key": "info"
         }
     }
-    
+
     create_kafka_response = client.post("/kafka", json=kafka_payload, headers=headers)
     assert create_kafka_response.status_code == 201
-    
+
     create_kafka_data = create_kafka_response.json()
     assert "id" in create_kafka_data
 
