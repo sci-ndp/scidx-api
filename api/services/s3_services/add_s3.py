@@ -64,8 +64,7 @@ def add_s3(
         if not extras:
             extras = {}
         staging_handle = dxspaces.Register('s3nc', resource_name, staging_params)
-        extras['staging_handle'] = json.dumps(staging_handle)
-
+        extras['staging_handle'] = staging_handle.model_dump_json()
     ckan = ckan_settings.ckan
 
     try:

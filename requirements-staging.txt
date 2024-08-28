@@ -1,1 +1,1 @@
-dxspaces
+dxspaces>=0.0.5

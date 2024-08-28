@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
+
 try:
-    import dxspaces
+    from dxspaces import DXSpacesClient
     have_staging = True
 except:
     have_staging = False
@@ -19,13 +20,13 @@ class RegistrationTest:
         return False
 
 class Settings(BaseSettings):
-    dxspaces_url: str = "http://localhost:8003"
+    dxspaces_url: str = "http://localhost:8001"
     dxspaces_registration: str = ""
 
     @property
     def dxspaces(self):
         if have_staging:
-            return DXSpacesClient(self.dspaces_url)
+            return DXSpacesClient(self.dxspaces_url, debug = True)
         else:
             return None
 
