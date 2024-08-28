@@ -1,7 +1,6 @@
 from ckanapi import NotFound
 from api.config.ckan_settings import ckan_settings
 
-
 def delete_dataset(dataset_name: str):
     """
     Delete a dataset from CKAN by its name.
@@ -24,7 +23,7 @@ def delete_dataset(dataset_name: str):
         dataset_id = dataset['id']
         print(f"Dataset '{dataset_name}' found with ID: {dataset_id}")
 
-        # Delete the dataset
+        # Attempt to delete the dataset using its ID
         ckan.action.dataset_purge(id=dataset_id)
         print(f"Dataset '{dataset_name}' successfully deleted.")
     except NotFound:
