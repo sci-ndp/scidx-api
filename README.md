@@ -29,6 +29,9 @@ Using Keycloak, the API manages user authentication and authorization, providing
 ### 4. URL Ingestion and Management
 The API supports data ingestion through URLs, allowing for dynamic management and updating of external data sources.
 
+### 5. Point of Presence (POP) Configuration
+The sciDX API can be configured for use as a Point of Presence (POP) within the NDP project. When the POP configuration is enabled, specific API routes, such as those related to stream management, are hidden to tailor the API's functionality for POP deployments.
+
 ## Installation
 
 For detailed instructions on installing, configuring, and accessing the sciDX API, please see the [Installation Guide](docs/installation.md).
