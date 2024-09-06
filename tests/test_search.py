@@ -1,22 +1,40 @@
 import pytest
 from fastapi.testclient import TestClient
-from api.main import app
-from api.config import keycloak_settings
+import requests
 import random
 import string
+from api.main import app
+from api.config.keycloak_settings import keycloak_settings
 
 client = TestClient(app)
 
 def generate_random_name(prefix="test"):
     return f"{prefix}_" + ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
+def get_test_user_token():
+    url = f"{keycloak_settings.keycloak_url}/realms/{keycloak_settings.realm_name}/protocol/openid-connect/token"
+    data = {
+        "grant_type": "password",
+        "client_id": keycloak_settings.client_id,
+        "client_secret": keycloak_settings.client_secret,
+        "username": "placeholder@placeholder.com",
+        "password": "placeholder"
+    }
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    response = requests.post(url, data=data, headers=headers)
+    response.raise_for_status()
+    return response.json()["access_token"]
+
 def test_create_search_and_delete_datasource_with_org():
     org_name = generate_random_name("org")
     dataset_name = generate_random_name("dataset")
     resource_name = generate_random_name("resource")
-    
+    token = get_test_user_token()
+
     headers = {
-        "Authorization": f"Bearer {keycloak_settings.test_token}"
+        "Authorization": f"Bearer {token}"
     }
     
     # Step 1: Create the organization

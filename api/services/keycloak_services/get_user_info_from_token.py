@@ -15,18 +15,6 @@ def get_user_info_from_token(token):
     user_info : dict
         details of the user
     """
-    # First, check if the token is the TEST_TOKEN
-    if token == keycloak_settings.test_token:
-        # Return a test user
-        user_info = {}
-        user_info['id'] = 'test'
-        user_info['username'] = keycloak_settings.test_username
-        user_info['email'] = f"{keycloak_settings.test_username}" + \
-            f"@{keycloak_settings.test_username}.com"
-        user_info['first_name'] = keycloak_settings.test_username
-        user_info['last_name'] = keycloak_settings.test_username
-        return user_info
-
     try:
         user_keycloak=introspect_user_token(token)
         # If the response is successful
