@@ -38,7 +38,7 @@ async def create_stream(payload: ProducerPayload):
     # Filter streams based on the updated logic
     filtered_streams = [
         stream for stream in filtered_streams
-        if stream_matches_keywords(stream, keywords_list) and stream.extras.get('mapping')
+        if stream_matches_keywords(stream, keywords_list)
     ]
 
     logger.info("Total streams after filtering: %d", len(filtered_streams))
