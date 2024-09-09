@@ -5,7 +5,8 @@ from uuid import uuid4
 from aiokafka import AIOKafkaProducer
 from api.config.kafka_settings import kafka_settings
 from .compressor import compress_data
-from .data_cleaning import process_kafka_stream
+from .stream_processing.kafka import process_kafka_stream
+from .stream_processing.url import process_url_stream
 
 KAFKA_SERVER = f"{kafka_settings.kafka_host}:{kafka_settings.kafka_port}"
 
@@ -37,6 +38,14 @@ class Producer:
         resource = stream.resources[0]
         if resource.format == 'kafka':
             await process_kafka_stream(
+                stream,
+                self.filter_semantics,
+                self.buffer_lock,
+                self.send_data,
+                self.loop
+            )
+        elif resource.format == 'url':
+            await process_url_stream(
                 stream,
                 self.filter_semantics,
                 self.buffer_lock,
