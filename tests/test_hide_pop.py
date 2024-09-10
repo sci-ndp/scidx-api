@@ -6,7 +6,7 @@ client = TestClient(app)
 
 def test_pop_configuration():
     headers = {
-        "Authorization": f"Bearer {keycloak_settings.test_token}"
+        "Authorization": f"Bearer {keycloak_settings.test_username}"
     }
 
     if swagger_settings.pop:  # Check if POP is True

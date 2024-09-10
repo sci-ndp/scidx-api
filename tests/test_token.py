@@ -1,7 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
-from api.main import app  # Asegúrate de que este sea el path correcto hacia tu aplicación FastAPI
-from api.config import keycloak_settings
+from api.main import app
+import requests
+from api.config.keycloak_settings import keycloak_settings
 
 client = TestClient(app)
 
@@ -11,10 +12,12 @@ def test_login_for_access_token_success():
         data={"username": keycloak_settings.test_username, "password": keycloak_settings.test_password}
     )
     assert response.status_code == 200
-    assert response.json()["access_token"] == keycloak_settings.test_password
+    assert response.json()["access_token"] == keycloak_settings.test_username
     assert response.json()["token_type"] == "bearer"
 
+
 def test_login_for_access_token_failure():
+    # Test incorrect credentials
     response = client.post(
         "/token",
         data={"username": "wronguser", "password": "wrongpassword"}

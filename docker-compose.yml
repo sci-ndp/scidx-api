@@ -9,3 +9,10 @@ services:
       - ./api:/code/api
       - ./env_variables:/code/env_variables
       - ./requirements.txt:/code/requirements.txt
+    networks:
+      - backend
+
+networks:
+  backend:
+    name: backend
+    driver: bridge

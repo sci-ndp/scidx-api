@@ -16,7 +16,7 @@ def test_create_search_and_delete_datasource_with_org():
     resource_name = generate_random_name("resource")
     
     headers = {
-        "Authorization": f"Bearer {keycloak_settings.test_token}"
+        "Authorization": f"Bearer {keycloak_settings.test_username}"
     }
     
     # Step 1: Create the organization
