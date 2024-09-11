@@ -1,7 +1,8 @@
 import json
-from api.config.ckan_settings import ckan_settings
+from api.config import ckan_settings, dxspaces_settings 
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from api.services.default_services import log_retry_attempt
+import dxspaces
 
 # Define a set of reserved keys that should not be used in the extras
 RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'collection', 'url', 'mapping', 'processing', 'file_type'}
@@ -62,6 +63,12 @@ def add_url(
     url_extras = {
         "file_type":file_type
     }
+
+    if dxspaces_settings.registration_methods['url']:
+        dxspaces = dxspaces_settings.dxspaces
+        staging_params = {'url': resource_url}
+        staging_handle = dxspaces.Register('url', resource_name, staging_params)
+        extras['staging_handle'] = staging_handle.model_dump_json()
 
     if mapping:
         url_extras['mapping'] = json.dumps(mapping)
