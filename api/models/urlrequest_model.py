@@ -1,8 +1,6 @@
+from pydantic import BaseModel, Field, ValidationError, model_validator
 from enum import Enum
 from typing import Any, Dict, Optional
-
-from pydantic import BaseModel, Field, ValidationError, model_validator
-
 
 # Define an enumeration for file types
 class FileTypeEnum(str, Enum):
@@ -28,18 +26,18 @@ class StreamProcessingInfo(BaseModel):
 
 
 class CSVProcessingInfo(BaseModel):
-    delimiter: str = Field(
-        ...,
+    delimiter: Optional[str] = Field(
+        None,
         description="The delimiter used in the CSV file.",
         json_schema_extra={"example": ","},
     )
-    header_line: int = Field(
-        ...,
+    header_line: Optional[int] = Field(
+        None,
         description="The line number of the header in the CSV file.",
         json_schema_extra={"example": 1},
     )
-    start_line: int = Field(
-        ...,
+    start_line: Optional[int] = Field(
+        None,
         description="The line number where the data starts in the CSV file.",
         json_schema_extra={"example": 2},
     )
@@ -51,18 +49,18 @@ class CSVProcessingInfo(BaseModel):
 
 
 class TXTProcessingInfo(BaseModel):
-    delimiter: str = Field(
-        ...,
+    delimiter: Optional[str] = Field(
+        None,
         description="The delimiter used in the TXT file.",
         json_schema_extra={"example": "\\t"},
     )
-    header_line: int = Field(
-        ...,
+    header_line: Optional[int] = Field(
+        None,
         description="The line number of the header in the TXT file.",
         json_schema_extra={"example": 1},
     )
-    start_line: int = Field(
-        ...,
+    start_line: Optional[int] = Field(
+        None,
         description="The line number where the data starts in the TXT file.",
         json_schema_extra={"example": 2},
     )
@@ -156,11 +154,11 @@ class URLRequest(BaseModel):
         file_type = values.get("file_type")
         processing = values.get("processing")
 
-        if processing is None:
-            raise ValueError(
-                f"Processing information must be provided for file_type '{file_type}'."
-            )
+        # Skip validation if processing is not provided
+        if not processing:
+            return values
 
+        # Map file types to their respective processing model
         processing_validators = {
             FileTypeEnum.stream: StreamProcessingInfo,
             FileTypeEnum.CSV: CSVProcessingInfo,
@@ -174,7 +172,7 @@ class URLRequest(BaseModel):
             raise ValueError(f"Unsupported file_type: {file_type}")
 
         try:
-            validator(**processing)
+            validator(**processing)  # Validate the processing info for the file type
         except ValidationError as e:
             raise ValueError(
                 f"Invalid processing info for file_type '{file_type}': {e}"
