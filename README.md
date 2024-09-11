@@ -1,50 +1,49 @@
 # sciDX API
 
-sciDX API is a RESTful API built with FastAPI. It is one of the components of the sciDX stack.
-    
-```mermaid
-flowchart TD
-    %% Define styles for better visibility
-    classDef redStroke stroke:#ff0000,stroke-width:4px;
+sciDX API is a RESTful API built with FastAPI that plays a crucial role in the sciDX stack. This project is designed to facilitate the management and processing of data streams from various sources, integrating services like CKAN and Keycloak for authentication, authorization, and data handling.
 
-    %% Define the main elements
-    user(User)
-    python1[Python <br/> scidx]
-    python2[Python <br/> scidx_tools]
-    scidx_api[sciDX API]
-    keycloak[Keycloak]
-    ckan1[CKAN <br/> Global]
-    ckan2[CKAN]
+## What is sciDX API?
 
-    %% Define the connections
-    user <--> python1
-    user <--> python2
-    user <--> scidx_api
-    python1 --> python2
-    python1 <--> scidx_api
-    python2 --> scidx_api
-    scidx_api <--> keycloak
-    scidx_api <--> ckan1
-    scidx_api <--> ckan2
+The sciDX API is a key component within the sciDX ecosystem, a platform designed to manage and process scientific data efficiently and securely. The API enables:
 
-    %% Group related nodes in a subgraph
-    subgraph sciDX Stack
-        direction TB
-        python1
-        python2
-        scidx_api
-    end
+- **Data Stream Management**: Processes and manages real-time data using Kafka.
+- **CKAN Integration**: Facilitates the integration and manipulation of datasets in CKAN.
+- **Authentication and Authorization**: Implements access control using Keycloak.
+- **URL Handling and Data Streaming**: Manages data ingestion, updating, and processing through URLs and streaming services.
 
-    %% Apply styles to specific nodes
-    class scidx_api redStroke;
-```
-![scidx-api](/docs/images/scidx-api.excalidraw.png)
+### Architecture Diagram
 
-## Table of Contents
+![Architecture Diagram](docs/images/scidx-api.excalidraw.png)
 
-- [Installation](docs/installation.md)
-- [Configuration](docs/configuration.md)
-- [Usage](docs/usage.md)
-- [Testing](docs/testing.md)
-- [Contributing](docs/contributing.md)
-- [License](LICENSE)
+## Use Cases
+
+### 1. Real-Time Data Processing
+The API enables the publishing and consumption of messages via Kafka, facilitating real-time data processing in a distributed environment.
+
+### 2. CKAN Dataset Management
+sciDX API integrates with CKAN to create, update, and delete datasets, ensuring that scientific data is accessible and efficiently managed.
+
+### 3. Secure Authentication
+Using Keycloak, the API manages user authentication and authorization, providing robust access control.
+
+### 4. URL Ingestion and Management
+The API supports data ingestion through URLs, allowing for dynamic management and updating of external data sources.
+
+### 5. Point of Presence (POP) Configuration
+The sciDX API can be configured for use as a Point of Presence (POP) within the NDP project. When the POP configuration is enabled, specific API routes, such as those related to stream management, are hidden to tailor the API's functionality for POP deployments.
+
+## Installation
+
+For detailed instructions on installing, configuring, and accessing the sciDX API, please see the [Installation Guide](docs/installation.md).
+
+## Contributing
+
+Contributions are welcome. Please review our [Contributing Guide](docs/contributing.md) for more details.
+
+## Testing
+
+All tests are designed to run with *pytest*. Before submitting new contributions, please ensure that all existing tests pass successfully. Additionally, for any new features or functionalities introduced, create appropriate tests without modifying the existing ones. This helps maintain the integrity and reliability of the API.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

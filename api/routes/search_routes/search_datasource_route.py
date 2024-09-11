@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional, Union, Literal
+from typing import List, Optional, Literal
 from api.services import datasource_services
 from api.models import DataSourceResponse
 from tenacity import RetryError
@@ -45,7 +45,9 @@ router = APIRouter()
             "description": "Bad Request",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Error message explaining the bad request"}
+                    "example": {
+                        "detail": "Error message explaining the bad request"
+                    }
                 }
             }
         }
@@ -61,7 +63,9 @@ async def search_datasource(
     resource_description: Optional[str] = Query(None, description="The description of the dataset resource."),
     resource_format: Optional[str] = Query(None, description="The format of the dataset resource."),
     search_term: Optional[str] = Query(None, description="A term to search across all fields."),
-    server: Optional[Literal['local', 'global']] = Query('local', description="Specify the server to search on: 'local' or 'global'.")
+    server: Optional[Literal['local', 'global']] = Query(
+        'local', description="Specify the server to search on: 'local' or 'global'."
+    )
 ):
     """
     Endpoint to search by various parameters.
@@ -97,7 +101,8 @@ async def search_datasource(
     Raises
     ------
     HTTPException
-        If there is an error searching for the datasets, an HTTPException is raised with a detailed message.
+        If there is an error searching for the datasets, an HTTPException is 
+        raised with a detailed message.
     """
     try:
         results = await datasource_services.search_datasource(

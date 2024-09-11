@@ -3,7 +3,6 @@ from api.services import kafka_services
 from api.models.request_kafka_model import KafkaDataSourceRequest
 from tenacity import RetryError
 from typing import Dict, Any
-
 from api.services.keycloak_services.get_current_user import get_current_user
 
 router = APIRouter()
@@ -13,46 +12,49 @@ router = APIRouter()
     response_model=dict,
     status_code=status.HTTP_201_CREATED,
     summary="Add a new Kafka topic",
-    description="""
-Add a Kafka topic and its associated metadata to the system.
-
-### Required Fields
-- **dataset_name**: The unique name of the dataset to be created.
-- **dataset_title**: The title of the dataset to be created.
-- **owner_org**: The ID of the organization to which the dataset belongs.
-- **kafka_topic**: The Kafka topic name.
-- **kafka_host**: The Kafka host.
-- **kafka_port**: The Kafka port.
-- **dataset_description**: A description of the dataset (optional).
-- **extras**: Additional metadata to be added to the dataset as extras (optional).
-- **mapping**: Mapping information for the dataset. For selecting the desired fields to send and how they will be named (optional).
-- **processing**: Processing information for the dataset (optional).
-
-### Example Payload
-```json
-{
-    "dataset_name": "kafka_topic_example",
-    "dataset_title": "Kafka Topic Example",
-    "owner_org": "organization_id",
-    "kafka_topic": "example_topic",
-    "kafka_host": "kafka_host",
-    "kafka_port": "kafka_port",
-    "dataset_description": "This is an example Kafka topic registered as a system dataset.",
-    "extras": {
-        "key1": "value1",
-        "key2": "value2"
-    },
-    "mapping": {
-        "field1": "mapping1",
-        "field2": "mapping2"
-    },
-    "processing": {
-        "data_key": "data",
-        "info_key": "info"
-    }
-}
-```
-""",
+    description=(
+        "Add a Kafka topic and its associated metadata to the system.\n\n"
+        "### Required Fields\n"
+        "- **dataset_name**: The unique name of the dataset to be created.\n"
+        "- **dataset_title**: The title of the dataset to be created.\n"
+        "- **owner_org**: The ID of the organization to which the dataset "
+        "belongs.\n"
+        "- **kafka_topic**: The Kafka topic name.\n"
+        "- **kafka_host**: The Kafka host.\n"
+        "- **kafka_port**: The Kafka port.\n"
+        "- **dataset_description**: A description of the dataset "
+        "(optional).\n"
+        "- **extras**: Additional metadata to be added to the dataset as "
+        "extras (optional).\n"
+        "- **mapping**: Mapping information for the dataset. For selecting "
+        "the desired fields to send and how they will be named "
+        "(optional).\n"
+        "- **processing**: Processing information for the dataset "
+        "(optional).\n\n"
+        "### Example Payload\n"
+        "{\n"
+        '    "dataset_name": "kafka_topic_example",\n'
+        '    "dataset_title": "Kafka Topic Example",\n'
+        '    "owner_org": "organization_id",\n'
+        '    "kafka_topic": "example_topic",\n'
+        '    "kafka_host": "kafka_host",\n'
+        '    "kafka_port": "kafka_port",\n'
+        '    "dataset_description": "This is an example Kafka topic '
+        'registered as a system dataset.",\n'
+        '    "extras": {\n'
+        '        "key1": "value1",\n'
+        '        "key2": "value2"\n'
+        '    },\n'
+        '    "mapping": {\n'
+        '        "field1": "mapping1",\n'
+        '        "field2": "mapping2"\n'
+        '    },\n'
+        '    "processing": {\n'
+        '        "data_key": "data",\n'
+        '        "info_key": "info"\n'
+        '    }\n'
+        "}\n"
+    ),
     responses={
         201: {
             "description": "Kafka dataset created successfully",
@@ -66,7 +68,12 @@ Add a Kafka topic and its associated metadata to the system.
             "description": "Bad Request",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Error creating Kafka dataset: <error message>"}
+                    "example": {
+                        "detail": (
+                            "Error creating Kafka dataset: "
+                            "<error message>"
+                        )
+                    }
                 }
             }
         }
@@ -82,17 +89,20 @@ async def create_kafka_datasource(
     Parameters
     ----------
     data : KafkaDataSourceRequest
-        An object containing all the required parameters for creating a Kafka dataset and resource.
+        An object containing all the required parameters for creating a 
+        Kafka dataset and resource.
 
     Returns
     -------
     dict
-        A dictionary containing the ID of the created dataset if successful.
+        A dictionary containing the ID of the created dataset if 
+        successful.
 
     Raises
     ------
     HTTPException
-        If there is an error creating the dataset or resource, an HTTPException is raised with a detailed message.
+        If there is an error creating the dataset or resource, an 
+        HTTPException is raised with a detailed message.
     """
     try:
         dataset_id = kafka_services.add_kafka(

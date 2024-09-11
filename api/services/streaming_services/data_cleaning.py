@@ -97,7 +97,7 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
     kafka_host = stream.extras['host']
     kafka_port = stream.extras['port']
     kafka_topic = stream.extras['topic']
-    mapping = stream.extras.get('mapping')
+    mapping = stream.extras.get('mapping', {})
     processing = stream.extras.get('processing', {})
     data_key = processing.get('data_key', None)
     info_key = processing.get('info_key', None)

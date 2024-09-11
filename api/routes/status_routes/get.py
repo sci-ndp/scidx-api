@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from api.services import status_services
-from api.services.keycloak_services.get_admin_token import get_admin_token
+from api.services.keycloak_services.introspect_user_token import get_client_token
 
 router = APIRouter()
 
@@ -25,11 +25,17 @@ async def get_status():
         If there is an error connecting to CKAN or Keycloak, an HTTPException is raised with a detailed message.
     """
     try:
+        # Check CKAN status
         ckan_is_active = status_services.check_ckan_status()
+        
+        # Check Keycloak status by attempting to get a client token
         try:
-            keycloak_is_active = get_admin_token()
+            get_client_token()
+            keycloak_is_active = True
         except Exception as e:
             keycloak_is_active = False
+
+        # Return appropriate message based on both statuses
         if ckan_is_active and keycloak_is_active:
             return "CKAN and Keycloak are active and reachable."
         else:
