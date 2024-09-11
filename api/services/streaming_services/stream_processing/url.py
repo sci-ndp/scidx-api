@@ -17,44 +17,57 @@ logger = logging.getLogger(__name__)
 
 CHUNK_SIZE = 10000
 TIME_WINDOW = 10  # seconds
+RETRY_LIMIT = 10
+BACKOFF_TIME = 5  # Backoff time between retries (in seconds)
 
 
-async def process_url_stream(stream, filter_semantics, buffer_lock, send_data, loop):
+async def process_url_stream(stream, filter_semantics, buffer_lock, send_data, loop, stop_event):
     resource_url = stream.resources[0].url
     file_type = stream.extras.get('file_type', None)
     mapping = stream.extras.get('mapping', None)
     processing = stream.extras.get('processing', {})
-
     logger.info(f"Processing URL stream: {resource_url}, File Type: {file_type}, with mapping {mapping}")
 
-    try:
-        if file_type == 'CSV' or file_type == 'TXT' or file_type == 'NetCDF':
-            # Synchronous fetching for file-based content
-            logger.info("Fetching data for file-based type (CSV/TXT/NetCDF)...")
-            response = requests.get(resource_url)
-            if response.status_code != 200:
-                raise Exception(f"Failed to fetch data from {resource_url}")
+    retries = 0
+    while retries < RETRY_LIMIT:
+        try:
+            if file_type in ['CSV', 'TXT', 'NetCDF']:
+                # For file-based content: process and stop after completion
+                logger.info(f"Fetching data for file-based type ({file_type})...")
+                response = requests.get(resource_url)
+                response.raise_for_status()  # Raise an exception for bad status codes
 
-            logger.info("Successfully fetched data")
+                logger.info(f"Successfully fetched data for {file_type}")
 
-            # Handle CSV, TXT, or NetCDF depending on file type
-            if file_type == 'CSV' or file_type == 'TXT':
-                await process_csv_txt_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
-            elif file_type == 'NetCDF':
-                await process_netcdf_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
-        
-        elif file_type == 'stream':
-            # Asynchronous streaming with aiohttp
-            logger.info("Fetching data for stream type...")
-            async with aiohttp.ClientSession() as session:
-                async with session.get(resource_url) as response:
-                    if response.status != 200:
-                        raise Exception(f"Failed to fetch data from {resource_url}")
-                    logger.info(f"Successfully connected to stream: {resource_url}")
-                    await process_streaming_data(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
+                if file_type in ['CSV', 'TXT']:
+                    await process_csv_txt_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
+                elif file_type == 'NetCDF':
+                    await process_netcdf_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
 
-    except Exception as e:
-        logger.error(f"Error processing URL stream: {e}")
+                logger.info(f"Finished processing {file_type} file, no need to retry.")
+                return  # Exit once the file has been processed successfully
+
+            elif file_type == 'stream':
+                # For stream-based content: retry indefinitely
+                while not stop_event.is_set():
+                    logger.info(f"Fetching streaming data from {resource_url}...")
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(resource_url) as response:
+                            response.raise_for_status()  # Raise exception for non-2xx responses
+                            logger.info(f"Successfully connected to stream: {resource_url}")
+                            await process_streaming_data(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics, stop_event)
+
+        except requests.RequestException as e:
+            logger.error(f"Error fetching data from {resource_url}: {e}. Retrying in {BACKOFF_TIME} seconds...")
+            retries += 1
+            await asyncio.sleep(BACKOFF_TIME)
+        except Exception as e:
+            logger.error(f"Unhandled error in URL stream processing: {e}")
+            retries += 1
+            await asyncio.sleep(BACKOFF_TIME)
+
+    logger.error(f"Retry limit reached ({RETRY_LIMIT}), giving up on {resource_url}")
+
 
 async def process_csv_txt_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
     delimiter = processing.get('delimiter')
@@ -231,9 +244,9 @@ async def process_netcdf_stream(response, processing, mapping, stream, send_data
     except Exception as e:
         logger.error(f"Error processing NetCDF stream: {e}")
 
-
-async def process_streaming_data(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
+async def process_streaming_data(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics, stop_event):
     logger.info("Starting dynamic stream processing...")
+    retries = 0  # Track the number of retries
 
     try:
         buffer = ""
@@ -244,39 +257,66 @@ async def process_streaming_data(response, processing, mapping, stream, send_dat
         logger.info(f"Detected stream type: {stream_type}")
 
         async for line in response.content:
-            line_str = line.decode('utf-8').strip()
+            if stop_event.is_set():
+                logger.info("Stop event set. Exiting streaming loop.")
+                break  # Stop processing if stop event is set
 
-            # If the line is empty, skip processing
-            if not line_str:
-                continue
+            try:
+                line_str = line.decode('utf-8').strip()
 
-            if stream_type == "sse":
-                # Handle SSE: only process `data:` lines and accumulate JSON
-                if line_str.startswith("data: "):
-                    json_data_str = line_str[6:].strip()
-                    buffer += json_data_str
+                if not line_str:
+                    continue
 
-                    # Try to parse the buffer as a JSON object
+                if stream_type == "sse":
+                    if line_str.startswith("data: "):
+                        json_data_str = line_str[6:].strip()
+                        buffer += json_data_str
+
+                        try:
+                            json_data = json.loads(buffer)
+                            buffer = ""
+
+                            if data_key:
+                                data = get_nested_json_value(json_data, data_key.split('.'))
+                            else:
+                                data = flatten_json(json_data)  # Flatten the entire JSON object
+
+                            accumulated_data.append(data)
+
+                            if time.time() - last_send_time >= TIME_WINDOW:
+                                await process_and_send_data(
+                                    accumulated_data,
+                                    mapping,
+                                    stream,
+                                    send_data,
+                                    buffer_lock,
+                                    loop,
+                                    filter_semantics
+                                )
+                                logger.info(f"Batch of {len(accumulated_data)} messages sent.")
+                                accumulated_data = []
+                                last_send_time = time.time()
+
+                        except json.JSONDecodeError:
+                            logger.warning("Incomplete JSON detected, continue buffering more data.")
+                            continue
+
+                elif stream_type in ["json", "generic"]:
+                    buffer += line_str
                     try:
                         json_data = json.loads(buffer)
-                        buffer = ""  # Clear the buffer after successful parsing
-                        # logger.info(f"Successfully parsed JSON data: {json_data}")
+                        buffer = ""
 
-                        # Extract and process data based on the provided `data_key` or auto-detection
                         if data_key:
                             data = get_nested_json_value(json_data, data_key.split('.'))
                         else:
-                            data = detect_json_data_key(json_data)
-                            data = get_nested_json_value(json_data, data.split('.')) if data else json_data
+                            data = flatten_json(json_data)
 
-                        # Accumulate data
                         accumulated_data.append(data)
 
-                        # Check if it's time to send the accumulated data
                         if time.time() - last_send_time >= TIME_WINDOW:
-                            # Send accumulated data in a batch
                             await process_and_send_data(
-                                accumulated_data,  # Send accumulated data as a batch
+                                accumulated_data,
                                 mapping,
                                 stream,
                                 send_data,
@@ -285,49 +325,22 @@ async def process_streaming_data(response, processing, mapping, stream, send_dat
                                 filter_semantics
                             )
                             logger.info(f"Batch of {len(accumulated_data)} messages sent.")
-                            accumulated_data = []  # Clear the accumulated data
-                            last_send_time = time.time()  # Reset the last send time
+                            accumulated_data = []
+                            last_send_time = time.time()
 
                     except json.JSONDecodeError:
-                        logger.info("Incomplete JSON detected, continue buffering more data.")
+                        logger.warning("Incomplete JSON detected, continue buffering more data.")
                         continue
 
-            elif stream_type == "json" or stream_type == "generic":
-                # Try to parse the buffer as JSON once a complete chunk is detected
-                buffer += line_str
-                try:
-                    json_data = json.loads(buffer)
-                    buffer = ""  # Clear the buffer if valid JSON is detected
-
-                    # Extract and process data based on the detected or provided `data_key`
-                    if data_key:
-                        data = get_nested_json_value(json_data, data_key.split('.'))
-                    else:
-                        data = detect_json_data_key(json_data)
-                        data = get_nested_json_value(json_data, data.split('.')) if data else json_data
-
-                    # Accumulate data
-                    accumulated_data.append(data)
-
-                    # Check if it's time to send the accumulated data
-                    if time.time() - last_send_time >= TIME_WINDOW:
-                        # Send accumulated data in a batch
-                        await process_and_send_data(
-                            accumulated_data,  # Send accumulated data as a batch
-                            mapping,
-                            stream,
-                            send_data,
-                            buffer_lock,
-                            loop,
-                            filter_semantics
-                        )
-                        logger.info(f"Batch of {len(accumulated_data)} messages sent.")
-                        accumulated_data = []  # Clear the accumulated data
-                        last_send_time = time.time()  # Reset the last send time
-
-                except json.JSONDecodeError:
-                    logger.info("Incomplete JSON detected, continue buffering more data.")
-                    continue
+            except Exception as e:
+                logger.error(f"Error during streaming data processing: {e}")
+                retries += 1
+                if retries >= RETRY_LIMIT:
+                    logger.error(f"Maximum retry limit reached ({RETRY_LIMIT}), stopping retry attempts.")
+                    break
+                logger.info(f"Retrying after error... attempt {retries}/{RETRY_LIMIT}")
+                await asyncio.sleep(BACKOFF_TIME * retries)
+                continue  # Continue processing on error
 
         # After the stream ends, send any remaining accumulated data
         if accumulated_data:
@@ -343,7 +356,22 @@ async def process_streaming_data(response, processing, mapping, stream, send_dat
             logger.info(f"Final batch of {len(accumulated_data)} messages sent.")
 
     except Exception as e:
-        logger.error(f"Error processing streaming data: {e}")
+        logger.error(f"Unhandled exception during stream processing: {e}")
+        await asyncio.sleep(BACKOFF_TIME)
+
+def flatten_json(nested_json, parent_key='', sep='.'):
+    """
+    Flatten a nested JSON object, creating keys for nested values by joining 
+    parent and child keys with the provided separator.
+    """
+    flat_dict = {}
+    for k, v in nested_json.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            flat_dict.update(flatten_json(v, new_key, sep=sep))
+        else:
+            flat_dict[new_key] = v
+    return flat_dict
 
 
 def get_nested_json_value(data, keys):

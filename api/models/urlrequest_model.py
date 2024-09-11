@@ -114,8 +114,8 @@ class URLRequest(BaseModel):
         description="The URL of the resource to be added.",
         json_schema_extra={"example": "http://example.com/resource"},
     )
-    file_type: FileTypeEnum = Field(
-        ...,
+    file_type: Optional[FileTypeEnum] = Field(
+        None,
         description=(
             "The type of the file. "
             "Valid options are: stream, CSV, TXT, JSON, NetCDF."
