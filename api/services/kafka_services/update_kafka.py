@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 from api.config.ckan_settings import ckan_settings
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from api.services.default_services import log_retry_attempt
