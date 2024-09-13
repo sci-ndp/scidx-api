@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 from api.config.ckan_settings import ckan_settings
 from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 from api.services.default_services import log_retry_attempt
@@ -13,16 +14,16 @@ RESERVED_KEYS = {'name', 'title', 'owner_org', 'notes', 'id', 'resources', 'coll
 )
 def update_kafka(
     dataset_id: str,
-    dataset_name: str = None,
-    dataset_title: str = None,
-    owner_org: str = None,
-    kafka_topic: str = None,
-    kafka_host: str = None,
-    kafka_port: str = None,
-    dataset_description: str = None,
-    extras: dict = None,
-    mapping: dict = None,
-    processing: dict = None
+    dataset_name: Optional[str] = None,
+    dataset_title: Optional[str] = None,
+    owner_org: Optional[str] = None,
+    kafka_topic: Optional[str] = None,
+    kafka_host: Optional[str] = None,
+    kafka_port: Optional[str] = None,
+    dataset_description: Optional[str] = None,
+    extras: Optional[dict] = None,
+    mapping: Optional[dict] = None,
+    processing: Optional[dict] = None
 ):
     ckan = ckan_settings.ckan
 
@@ -32,24 +33,21 @@ def update_kafka(
     except Exception as e:
         raise Exception(f"Error fetching Kafka dataset: {str(e)}")
 
-    # Update dataset fields if provided
-    if dataset_name:
-        dataset['name'] = dataset_name
-    if dataset_title:
-        dataset['title'] = dataset_title
-    if owner_org:
-        dataset['owner_org'] = owner_org
-    if dataset_description:
-        dataset['notes'] = dataset_description
+    # Preserve all existing fields unless new values are provided
+    dataset['name'] = dataset_name or dataset.get('name')
+    dataset['title'] = dataset_title or dataset.get('title')
+    dataset['owner_org'] = owner_org or dataset.get('owner_org')
+    dataset['notes'] = dataset_description or dataset.get('notes')
 
-    # Handle extras update
+    # Handle extras update by merging current extras with new ones
     current_extras = {extra['key']: extra['value'] for extra in dataset.get('extras', [])}
-    
+
     if extras:
         if RESERVED_KEYS.intersection(extras):
             raise KeyError(f"Extras contain reserved keys: {RESERVED_KEYS.intersection(extras)}")
         current_extras.update(extras)
 
+    # Update mapping, processing, and Kafka-specific extras
     if mapping:
         current_extras['mapping'] = json.dumps(mapping)
 
@@ -57,15 +55,11 @@ def update_kafka(
         current_extras['processing'] = json.dumps(processing)
 
     if kafka_host or kafka_port or kafka_topic:
-        if kafka_port and isinstance(kafka_port, str) and kafka_port.isdigit():
-            kafka_port = int(kafka_port)
-        elif kafka_port and not isinstance(kafka_port, int):
-            raise ValueError(f"kafka_port must be an integer, got {type(kafka_port)}")
-        
-        current_extras['host'] = kafka_host if kafka_host else current_extras.get('host')
-        current_extras['port'] = kafka_port if kafka_port else current_extras.get('port')
-        current_extras['topic'] = kafka_topic if kafka_topic else current_extras.get('topic')
+        current_extras['host'] = kafka_host or current_extras.get('host')
+        current_extras['port'] = kafka_port or current_extras.get('port')
+        current_extras['topic'] = kafka_topic or current_extras.get('topic')
 
+    # Convert the updated extras back to CKAN format
     dataset['extras'] = [{'key': k, 'value': v} for k, v in current_extras.items()]
 
     try:

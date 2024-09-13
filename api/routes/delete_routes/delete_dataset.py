@@ -4,7 +4,7 @@ from api.services import dataset_services
 router = APIRouter()
 
 @router.delete(
-    "/{resource_name}",
+    "/resource/{resource_name}",
     response_model=dict,
     summary="Delete a resource",
     description="Delete a resource by its type and name.",

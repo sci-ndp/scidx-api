@@ -29,19 +29,15 @@ async def update_s3(
     except Exception as e:
         raise Exception(f"Error fetching S3 resource: {str(e)}")
 
-    # Update resource fields if provided
-    if resource_name:
-        resource['name'] = resource_name
-    if resource_title:
-        resource['title'] = resource_title
-    if owner_org:
-        resource['owner_org'] = owner_org
-    if notes:
-        resource['notes'] = notes
+    # Preserve all existing fields unless new values are provided
+    resource['name'] = resource_name or resource.get('name')
+    resource['title'] = resource_title or resource.get('title')
+    resource['owner_org'] = owner_org or resource.get('owner_org')
+    resource['notes'] = notes or resource.get('notes')
 
-    # Handle extras update
+    # Handle extras update by merging current extras with new ones
     current_extras = {extra['key']: extra['value'] for extra in resource.get('extras', [])}
-    
+
     if extras:
         if RESERVED_KEYS.intersection(extras):
             raise KeyError(f"Extras contain reserved keys: {RESERVED_KEYS.intersection(extras)}")
