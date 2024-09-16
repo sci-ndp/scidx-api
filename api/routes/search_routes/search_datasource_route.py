@@ -63,6 +63,7 @@ async def search_datasource(
     resource_description: Optional[str] = Query(None, description="The description of the dataset resource."),
     resource_format: Optional[str] = Query(None, description="The format of the dataset resource."),
     search_term: Optional[str] = Query(None, description="A term to search across all fields."),
+    timestamp: Optional[str] = Query(None, description="A time range term to filter results."),
     server: Optional[Literal['local', 'global']] = Query(
         'local', description="Specify the server to search on: 'local' or 'global'."
     )
@@ -90,6 +91,8 @@ async def search_datasource(
         The format of the dataset resource.
     search_term : Optional[str]
         A term to search across all fields.
+    timestamp : Optional[str]
+        A time range search term.
     server : Optional[str]
         Specify the server to search on: 'local' or 'global'.
 
@@ -115,6 +118,7 @@ async def search_datasource(
             resource_description=resource_description,
             resource_format=resource_format.lower() if resource_format else None,
             search_term=search_term,
+            timestamp=timestamp,
             server=server
         )
         return results
