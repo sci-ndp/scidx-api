@@ -108,12 +108,13 @@ async def search_datasource(
                 data_dict['sort'] = sort
             results = ckan.action.package_search(**data_dict)
             if results and results['results']:
-                print(results)
                 if datasets:
                     datasets['results'].extend(results['results'])
                 else:
                     datasets = results
             else:
+                if not datasets:
+                    datasets = results
                 break
             start = start + len(results['results'])
             if count_max and start >= count_max:
