@@ -50,60 +50,53 @@ async def search_datasource(
 
     try:
         datasets = ckan.action.package_search(q=query_string, rows=1000)  # Adjust rows as needed
-
         results = []
 
         for dataset in datasets['results']:
-            # Convert the dataset to a string representation
-            dataset_str = json.dumps(dataset, default=str).lower()
+            # Build a list of conditions to check in dataset's resources
+            conditions = [
+                resource_url and any(resource.get('url') == resource_url for resource in dataset.get('resources', [])),
+                resource_name and any(resource.get('name') == resource_name for resource in dataset.get('resources', [])),
+                resource_description and any(resource.get('description') == resource_description for resource in dataset.get('resources', [])),
+                resource_format and any(resource.get('format').lower() == resource_format.lower() for resource in dataset.get('resources', []))
+            ]
 
-            # Check if all search params are present in the dataset string
-            if all(param.lower() in dataset_str for param in search_params):
-                include_dataset = False
-                if resource_url or resource_name or resource_description or resource_format:
-                    resources = dataset.get('resources', [])
-                    for resource in resources:
-                        if (
-                            (resource_url and resource.get('url') == resource_url) or
-                            (resource_name and resource.get('name') == resource_name) or
-                            (resource_description and resource.get('description') == resource_description) or
-                            (resource_format and resource.get('format').lower() == resource_format)
-                        ):
-                            include_dataset = True
-                            break
-                else:
-                    include_dataset = True
+            include_dataset = any(conditions) or not any(conditions)
 
-                if include_dataset:
-                    resources_list = [
-                        Resource(
-                            id=res['id'],
-                            url=res['url'],
-                            name=res['name'],
-                            description=res.get('description'),
-                            format=res.get('format')
-                        ) for res in dataset.get('resources', [])
-                    ]
+            if include_dataset:
+                resources_list = [
+                    Resource(
+                        id=res['id'],
+                        url=res['url'],
+                        name=res['name'],
+                        description=res.get('description'),
+                        format=res.get('format')
+                    ) for res in dataset.get('resources', [])
+                ]
 
-                    organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
+                organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
+                extras = {extra['key']: extra['value'] for extra in dataset.get('extras', [])}
 
-                    extras = {extra['key']: extra['value'] for extra in dataset.get('extras', [])}
+                # Parse JSON strings for specific extras
+                if 'mapping' in extras:
+                    extras['mapping'] = json.loads(extras['mapping'])
+                if 'processing' in extras:
+                    extras['processing'] = json.loads(extras['processing'])
 
-                    # Convert mapping and processing fields back to JSON
-                    if 'mapping' in extras:
-                        extras['mapping'] = json.loads(extras['mapping'])
-                    if 'processing' in extras:
-                        extras['processing'] = json.loads(extras['processing'])
+                results.append(DataSourceResponse(
+                    id=dataset['id'],
+                    name=dataset['name'],
+                    title=dataset['title'],
+                    owner_org=organization_name,
+                    description=dataset.get('notes'),
+                    resources=resources_list,
+                    extras=extras
+                ))
 
-                    results.append(DataSourceResponse(
-                        id=dataset['id'],
-                        name=dataset['name'],
-                        title=dataset['title'],
-                        owner_org=organization_name,
-                        description=dataset.get('notes'),
-                        resources=resources_list,
-                        extras=extras
-                    ))
+        # Apply post-retrieval keyword filtering
+        if search_term:
+            keywords_list = [keyword.strip().lower() for keyword in search_term.split(",")]
+            results = [dataset for dataset in results if stream_matches_keywords(dataset, keywords_list)]
 
         return results
 
@@ -111,3 +104,15 @@ async def search_datasource(
         return []
     except Exception as e:
         raise Exception(f"Error searching for datasets: {str(e)}")
+
+
+def stream_matches_keywords(stream, keywords_list):
+    """
+    Check if the stream's attributes match any of the provided keywords.
+    Convert the stream object to a JSON string, then search for keywords.
+    """
+    # Convert stream object to JSON string in lowercase for easier keyword matching
+    stream_str = json.dumps(stream.__dict__, default=str).lower()
+
+    # Check if any keyword is present in the stream's data
+    return any(keyword in stream_str for keyword in keywords_list)
