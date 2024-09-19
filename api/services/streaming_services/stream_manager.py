@@ -19,12 +19,24 @@ async def create_stream(payload: ProducerPayload):
     else:
         keywords_list = []
 
-    # Fetch all possible streams based on search terms
-    filtered_streams = await search_datasource(search_term=payload.keywords)
+    # Case 1: If match_all is true, we search using all keywords combined in the search term
+    if payload.match_all and keywords_list:
+        combined_keywords = " AND ".join(keywords_list)
+        filtered_streams = await search_datasource(search_term=combined_keywords)
+    # Case 2: If match_all is false, we search for each keyword separately and combine the results
+    elif keywords_list:
+        filtered_streams = []
+        for keyword in keywords_list:
+            streams = await search_datasource(search_term=keyword)
+            filtered_streams.extend(streams)
+        # Remove duplicates by converting the list to a set and back to a list
+        filtered_streams = list({stream.id: stream for stream in filtered_streams}.values())
+    else:
+        filtered_streams = await search_datasource()
 
     logger.info("Total streams found: %d", len(filtered_streams))
 
-    def stream_matches_keywords(stream, keywords_list):
+    def stream_matches_keywords(stream, keywords_list, match_all):
         """
         Check if the stream's attributes match any or all of the provided keywords.
         Convert the stream object to a JSON string, then search for keywords.
@@ -32,15 +44,15 @@ async def create_stream(payload: ProducerPayload):
         # Convert stream object to JSON string in lowercase for easier keyword matching
         stream_str = json.dumps(stream.__dict__, default=str).lower()
 
-        if payload.match_all:
+        if match_all:
             return all(keyword in stream_str for keyword in keywords_list)
         else:
             return any(keyword in stream_str for keyword in keywords_list)
 
-    # Filter streams based on keywords
+    # Further filter streams based on the exact match of keywords
     if keywords_list:
-        filtered_streams = [stream for stream in filtered_streams if stream_matches_keywords(stream, keywords_list)]
-    
+        filtered_streams = [stream for stream in filtered_streams if stream_matches_keywords(stream, keywords_list, payload.match_all)]
+
     logger.info("Total streams after filtering: %d", len(filtered_streams))
 
     if not filtered_streams:
@@ -53,7 +65,9 @@ async def create_stream(payload: ProducerPayload):
     asyncio.create_task(safe_producer_run(producer))
     
     logger.info("Stream created with ID: %s", producer.data_stream_id)
-    return producer.data_stream_id
+    involved_stream_ids = [stream.id for stream in filtered_streams]
+
+    return producer.data_stream_id, involved_stream_ids
 
 
 async def safe_producer_run(producer):
@@ -66,6 +80,7 @@ async def safe_producer_run(producer):
         logger.error(f"Producer encountered an error: {e}")
     finally:
         logger.info(f"Producer {producer.data_stream_id} has stopped.")
+
 
 async def get_stream_data(topic: str):
     """

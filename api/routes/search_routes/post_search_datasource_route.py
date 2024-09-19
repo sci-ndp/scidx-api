@@ -1,12 +1,26 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Body
 from typing import List, Optional, Literal
 from api.services import datasource_services
 from api.models import DataSourceResponse
 from tenacity import RetryError
+from pydantic import BaseModel
 
 router = APIRouter()
 
-@router.get(
+class SearchPayload(BaseModel):
+    dataset_name: Optional[str] = None
+    dataset_title: Optional[str] = None
+    owner_org: Optional[str] = None
+    resource_url: Optional[str] = None
+    resource_name: Optional[str] = None
+    dataset_description: Optional[str] = None
+    resource_description: Optional[str] = None
+    resource_format: Optional[str] = None
+    search_term: Optional[str] = None
+    server: Optional[Literal['local', 'global']] = 'local'
+
+
+@router.post(
     "/search",
     response_model=List[DataSourceResponse],
     summary="Search data sources",
@@ -54,44 +68,15 @@ router = APIRouter()
     }
 )
 async def search_datasource(
-    dataset_name: Optional[str] = Query(None, description="The name of the dataset."),
-    dataset_title: Optional[str] = Query(None, description="The title of the dataset."),
-    owner_org: Optional[str] = Query(None, description="The name of the organization."),
-    resource_url: Optional[str] = Query(None, description="The URL of the dataset resource."),
-    resource_name: Optional[str] = Query(None, description="The name of the dataset resource."),
-    dataset_description: Optional[str] = Query(None, description="The description of the dataset."),
-    resource_description: Optional[str] = Query(None, description="The description of the dataset resource."),
-    resource_format: Optional[str] = Query(None, description="The format of the dataset resource."),
-    search_term: Optional[str] = Query(None, description="A term to search across all fields."),
-    server: Optional[Literal['local', 'global']] = Query(
-        'local', description="Specify the server to search on: 'local' or 'global'."
-    )
+    payload: SearchPayload = Body(...)
 ):
     """
-    Endpoint to search by various parameters.
+    Endpoint to search by various parameters using a POST request.
 
     Parameters
     ----------
-    dataset_name : Optional[str]
-        The name of the dataset.
-    dataset_title : Optional[str]
-        The title of the dataset.
-    owner_org : Optional[str]
-        The name of the organization.
-    resource_url : Optional[str]
-        The URL of the dataset resource.
-    resource_name : Optional[str]
-        The name of the dataset resource.
-    dataset_description : Optional[str]
-        The description of the dataset.
-    resource_description : Optional[str]
-        The description of the dataset resource.
-    resource_format : Optional[str]
-        The format of the dataset resource.
-    search_term : Optional[str]
-        A term to search across all fields. Multiple values can be provided, separated by commas.
-    server : Optional[str]
-        Specify the server to search on: 'local' or 'global'.
+    payload : SearchPayload
+        The search parameters as a JSON object.
 
     Returns
     -------
@@ -101,21 +86,20 @@ async def search_datasource(
     Raises
     ------
     HTTPException
-        If there is an error searching for the datasets, an HTTPException is 
-        raised with a detailed message.
+        If there is an error searching for the datasets, an HTTPException is raised with a detailed message.
     """
     try:
         results = await datasource_services.search_datasource(
-            dataset_name=dataset_name,
-            dataset_title=dataset_title,
-            owner_org=owner_org,
-            resource_url=resource_url,
-            resource_name=resource_name,
-            dataset_description=dataset_description,
-            resource_description=resource_description,
-            resource_format=resource_format.lower() if resource_format else None,
-            search_term=search_term,
-            server=server
+            dataset_name=payload.dataset_name,
+            dataset_title=payload.dataset_title,
+            owner_org=payload.owner_org,
+            resource_url=payload.resource_url,
+            resource_name=payload.resource_name,
+            dataset_description=payload.dataset_description,
+            resource_description=payload.resource_description,
+            resource_format=payload.resource_format.lower() if payload.resource_format else None,
+            search_term=payload.search_term,
+            server=payload.server
         )
         return results
     except RetryError as e:
