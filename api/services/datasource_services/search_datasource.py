@@ -53,17 +53,20 @@ async def search_datasource(
         results = []
 
         for dataset in datasets['results']:
-            # Build a list of conditions to check in dataset's resources
-            conditions = [
-                resource_url and any(resource.get('url') == resource_url for resource in dataset.get('resources', [])),
-                resource_name and any(resource.get('name') == resource_name for resource in dataset.get('resources', [])),
-                resource_description and any(resource.get('description') == resource_description for resource in dataset.get('resources', [])),
-                resource_format and any(resource.get('format').lower() == resource_format.lower() for resource in dataset.get('resources', []))
-            ]
+            matching_resources = []
+            for resource in dataset.get('resources', []):
+                # Ensure that the resource matches all provided filter conditions
+                if (
+                    (not resource_url or resource.get('url') == resource_url) and
+                    (not resource_name or resource.get('name') == resource_name) and
+                    (not resource_description or resource.get('description') == resource_description) and
+                    (not resource_format or resource.get('format').lower() == resource_format.lower())
+                ):
+                    # Add only those resources that match all conditions
+                    matching_resources.append(resource)
 
-            include_dataset = any(conditions) or not any(conditions)
-
-            if include_dataset:
+            # Include dataset if at least one resource matches all the provided conditions
+            if matching_resources:
                 resources_list = [
                     Resource(
                         id=res['id'],
@@ -71,7 +74,7 @@ async def search_datasource(
                         name=res['name'],
                         description=res.get('description'),
                         format=res.get('format')
-                    ) for res in dataset.get('resources', [])
+                    ) for res in matching_resources
                 ]
 
                 organization_name = dataset.get('organization', {}).get('name') if dataset.get('organization') else None
@@ -108,11 +111,11 @@ async def search_datasource(
 
 def stream_matches_keywords(stream, keywords_list):
     """
-    Check if the stream's attributes match any of the provided keywords.
+    Check if the stream's attributes match all of the provided keywords.
     Convert the stream object to a JSON string, then search for keywords.
     """
     # Convert stream object to JSON string in lowercase for easier keyword matching
     stream_str = json.dumps(stream.__dict__, default=str).lower()
 
-    # Check if any keyword is present in the stream's data
-    return any(keyword in stream_str for keyword in keywords_list)
+    # Check if all keyword is present in the stream's data
+    return all(keyword in stream_str for keyword in keywords_list)
