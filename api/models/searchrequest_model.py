@@ -40,6 +40,10 @@ class SearchRequest(BaseModel):
         None, 
         description="A term to search across all fields.",
     )
+    filter_list: list[str] = Field(
+        None,
+        description="A list of field filters"
+    )
     timestamp: str = Field(
         None, 
         description="A time range term to filter results.",

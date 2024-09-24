@@ -37,7 +37,7 @@ def tstamp_to_query(timestamp):
         if end_time == '':
             end_time = '*'
         count_max = None
-        sort = None
+        sort = 'timetamp asc'
         fq = f'timestamp:[{start_time} TO {end_time}]'
     return(fq, count_max, sort)
 
@@ -57,6 +57,7 @@ async def search_datasource(
     resource_description: Optional[str] = None,
     resource_format: Optional[str] = None,
     search_term: Optional[str] = None,
+    filter_list: Optional[list[str]] = None,
     timestamp: Optional[str] = None,
     server: Optional[str] = "local"
 ) -> List[DataSourceResponse]:
@@ -69,6 +70,9 @@ async def search_datasource(
         ckan = ckan_settings.ckan_global
 
     search_params = []
+
+    if filter_list:
+        search_params.extend(filter_list)
 
     if search_term:
         search_params.append(search_term)
