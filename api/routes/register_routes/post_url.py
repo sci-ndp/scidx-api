@@ -26,9 +26,13 @@ router = APIRouter()
         "- **extras**: Additional metadata to be added to the resource "
         "package as extras (optional).\n"
         "- **mapping**: Mapping information for the dataset (optional).\n"
-        "- **processing**: Processing information for the dataset, which "
-        "varies based on the `file_type`.\n\n"
-        "### File Type-Specific Processing Information\n"
+        "- **processing**: Processing information for the dataset is optional "
+        "and varies based on the `file_type`. If provided, it must match the "
+        "fields required for the specific file type.\n\n"
+        "### File Type-Specific Processing Information (Optional)\n"
+        "If you provide processing information, ensure it follows the expected "
+        "structure for the selected `file_type`. Here are the details for each "
+        "type:\n\n"
         "1. **Stream**\n"
         "    ```json\n"
         '    "processing": {\n'
@@ -36,8 +40,8 @@ router = APIRouter()
         '        "data_key": "results"\n'
         "    }\n"
         "    ```\n"
-        "    - **refresh_rate**: The refresh rate for the data stream.\n"
-        "    - **data_key**: The key for the response data in the JSON file.\n\n"
+        "    - **refresh_rate**: The refresh rate for the data stream (optional).\n"
+        "    - **data_key**: The key for the response data in the JSON file (optional).\n\n"
         "2. **CSV**\n"
         "    ```json\n"
         '    "processing": {\n'
@@ -47,13 +51,10 @@ router = APIRouter()
         '        "comment_char": "#"\n'
         "    }\n"
         "    ```\n"
-        "    - **delimiter**: The delimiter used in the CSV file.\n"
-        "    - **header_line**: The line number of the header in the CSV "
-        "file.\n"
-        "    - **start_line**: The line number where the data starts in the "
-        "CSV file.\n"
-        "    - **comment_char**: The character used for comments in the CSV "
-        "file (optional).\n\n"
+        "    - **delimiter**: The delimiter used in the CSV file (optional).\n"
+        "    - **header_line**: The line number of the header in the CSV file (optional).\n"
+        "    - **start_line**: The line number where the data starts in the CSV file (optional).\n"
+        "    - **comment_char**: The character used for comments in the CSV file (optional).\n\n"
         "3. **TXT**\n"
         "    ```json\n"
         '    "processing": {\n'
@@ -62,24 +63,20 @@ router = APIRouter()
         '        "start_line": 2\n'
         "    }\n"
         "    ```\n"
-        "    - **delimiter**: The delimiter used in the TXT file.\n"
-        "    - **header_line**: The line number of the header in the TXT "
-        "file.\n"
-        "    - **start_line**: The line number where the data starts in the "
-        "TXT file.\n\n"
+        "    - **delimiter**: The delimiter used in the TXT file (optional).\n"
+        "    - **header_line**: The line number of the header in the TXT file (optional).\n"
+        "    - **start_line**: The line number where the data starts in the TXT file (optional).\n\n"
         "4. **JSON**\n"
         "    ```json\n"
         '    "processing": {\n'
         '        "info_key": "count",\n'
-        '        "additional_key": "",\n'
+        '        "additional_key": "metadata",\n'
         '        "data_key": "results"\n'
         "    }\n"
         "    ```\n"
-        "    - **info_key**: The key for additional information in the JSON "
-        "file (optional).\n"
-        "    - **additional_key**: An additional key in the JSON file "
-        "(optional).\n"
-        "    - **data_key**: The key for the response data in the JSON file.\n\n"
+        "    - **info_key**: The key for additional information in the JSON file (optional).\n"
+        "    - **additional_key**: An additional key in the JSON file (optional).\n"
+        "    - **data_key**: The key for the response data in the JSON file (optional).\n\n"
         "5. **NetCDF**\n"
         "    ```json\n"
         '    "processing": {\n'
@@ -146,7 +143,7 @@ async def create_url_resource(
             notes=data.notes,
             extras=data.extras,
             mapping=data.mapping,
-            processing=data.processing
+            processing=data.processing  # Optional processing
         )
         return {"id": resource_id}
     except RetryError as e:

@@ -15,3 +15,7 @@ zstandard
 aiohttp
 pandas
 python-multipart
+xarray
+h5netcdf
+h5py
+sseclient

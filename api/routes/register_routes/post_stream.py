@@ -36,7 +36,10 @@ async def create_kafka_stream(
     _: Dict[str, Any] = Depends(get_current_user)
 ):
     try:
-        data_stream_id = await create_stream(payload)
-        return {"topic": f"data_stream_{data_stream_id}"}
+        data_stream_id, involved_stream_ids = await create_stream(payload)
+        return {
+            "topic": f"data_stream_{data_stream_id}",
+            "involved_streams": involved_stream_ids
+        }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

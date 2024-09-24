@@ -55,14 +55,21 @@ async def update_url(
         # If the file type hasn't changed but processing info is provided
         processing = validate_manual_processing_info(current_file_type, processing)
 
-    # Prepare the updated data
+    # Preserve existing resource fields
     updated_data = {
         'name': resource_name or resource['name'],
         'title': resource_title or resource['title'],
         'owner_org': owner_org or resource['owner_org'],
         'notes': notes or resource['notes'],
-        'extras': resource.get('extras', [])
+        'resources': resource['resources'],  # Preserve the existing resources
+        'extras': resource.get('extras', [])  # Keep existing extras
     }
+
+    # Merge new extras with existing extras, ensuring no data loss
+    if extras:
+        if RESERVED_KEYS.intersection(extras):
+            raise KeyError(f"Extras contain reserved keys: {RESERVED_KEYS.intersection(extras)}")
+        current_extras.update(extras)
 
     # Update the extras with new mapping, processing, and file type if provided
     if file_type:
@@ -72,12 +79,8 @@ async def update_url(
     if processing is not None:
         # If processing is explicitly provided (even if empty), update it
         current_extras['processing'] = json.dumps(processing)
-    if extras:
-        if RESERVED_KEYS.intersection(extras):
-            raise KeyError(f"Extras contain reserved keys: {RESERVED_KEYS.intersection(extras)}")
-        current_extras.update(extras)
 
-    # Convert back to the expected CKAN format
+    # Convert the merged extras back to CKAN format
     updated_data['extras'] = [{'key': k, 'value': v} for k, v in current_extras.items()]
 
     # Perform the update
@@ -94,6 +97,8 @@ async def update_url(
         raise Exception(f"Error updating resource with ID {resource_id}: {str(e)}")
 
     return {"message": "Resource updated successfully"}
+
+
 
 
 def validate_manual_processing_info(file_type: str, processing: dict):
