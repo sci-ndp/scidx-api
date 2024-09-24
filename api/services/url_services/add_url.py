@@ -68,6 +68,7 @@ def add_url(
         dxspaces = dxspaces_settings.dxspaces
         staging_params = {'url': resource_url}
         staging_handle = dxspaces.Register('url', resource_name, staging_params)
+        extras['staging_socket'] = dxspaces_settings.dxspaces_url
         extras['staging_handle'] = staging_handle.model_dump_json()
 
     if mapping:
