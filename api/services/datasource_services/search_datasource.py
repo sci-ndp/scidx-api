@@ -7,7 +7,7 @@ from api.models import DataSourceResponse, Resource
 from api.services.default_services import log_retry_attempt
 
 def tstamp_to_query(timestamp):
-    tstamp_split = timestamp.split('_')
+    tstamp_split = timestamp.split('/')
     if len(tstamp_split) > 2:
         raise ValueError("timestamp has too many range elements.")
     if len(tstamp_split) == 1:
