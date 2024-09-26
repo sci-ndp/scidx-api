@@ -21,7 +21,7 @@ async def create_stream(payload: ProducerPayload):
 
     # Case 1: If match_all is true, we search using all keywords combined in the search term
     if payload.match_all and keywords_list:
-        combined_keywords = " AND ".join(keywords_list)
+        combined_keywords = ",".join(keywords_list)
         filtered_streams = await search_datasource(search_term=combined_keywords)
     # Case 2: If match_all is false, we search for each keyword separately and combine the results
     elif keywords_list:

@@ -1,6 +1,7 @@
 import pandas as pd
 import logging
-import time
+import re
+
 logger = logging.getLogger(__name__)
 
 def mapped_values_vectorized(mapping, df):
@@ -17,81 +18,194 @@ def mapped_values_vectorized(mapping, df):
                     result[key] = df[path]
     return result
 
+def eval_condition(condition, df):
+    condition = condition.strip()
+
+    # Handling parentheses first (recursive evaluation of conditions inside parentheses)
+    while '(' in condition and ')' in condition:
+        inner_condition = re.search(r'\(([^()]+)\)', condition).group(1)
+        inner_result = eval_condition(inner_condition, df)
+        condition = condition.replace(f"({inner_condition})", str(inner_result))
+
+    # Splitting on OR first
+    if ' OR ' in condition:
+        sub_conditions = condition.split(' OR ')
+        return pd.concat([eval_condition(sub.strip(), df) for sub in sub_conditions], axis=1).any(axis=1)
+
+    # Splitting on AND second
+    if ' AND ' in condition:
+        sub_conditions = condition.split(' AND ')
+        return pd.concat([eval_condition(sub.strip(), df) for sub in sub_conditions], axis=1).all(axis=1)
+
+    # Now handle comparisons with possible math expressions
+    field, operator, value = parse_condition(condition)
+
+    # Evaluate the value part for the IN operator
+    if operator == 'IN':
+        try:
+            # Properly handle the list conversion
+            value_list = eval(value) if isinstance(value, str) and value.startswith('[') and value.endswith(']') else value
+            if not isinstance(value_list, list):
+                logger.error(f"Invalid list for IN condition: '{value}' in condition '{condition}'")
+                return pd.Series([False] * len(df), index=df.index)
+        except Exception as e:
+            logger.error(f"Error parsing list for IN condition: '{value}' in condition '{condition}': {e}")
+            return pd.Series([False] * len(df), index=df.index)
+    else:
+        value_values = evaluate_expression(value, df)
+
+    if field in df.columns:
+        field_values = evaluate_expression(field, df)
+    else:
+        try:
+            field_values = float(field)
+        except ValueError:
+            field_values = field.strip().strip("'").strip('"')
+
+    # Apply the comparison including the IN operator
+    if operator == '>=':
+        return field_values >= value_values
+    elif operator == '>':
+        return field_values > value_values
+    elif operator == '<=':
+        return field_values <= value_values
+    elif operator == '<':
+        return field_values < value_values
+    elif operator == '!=':
+        return field_values != value_values
+    elif operator == '=':
+        return field_values == value_values
+    elif operator == 'IN':
+        return field_values.isin(value_list)
+
+    return pd.Series([False] * len(df), index=df.index)
+
+def parse_condition(condition):
+    # Adjust to capture the 'IN' condition correctly
+    operators = ['>=', '>', '<=', '<', '!=', '=', 'IN']
+    for op in operators:
+        # Use regex to correctly identify the IN condition especially with lists
+        if f" {op} " in condition:
+            field, value = re.split(rf'\s{op}\s', condition, maxsplit=1)
+            return field.strip(), op, value.strip()
+    raise ValueError(f"Invalid condition: {condition}")
+
+def evaluate_expression(expression, df):
+    """
+    Evaluate mathematical expressions, literal strings, or lists in the context of the dataframe.
+    """
+    expression = expression.strip()
+
+    # Check if the expression is a list
+    if expression.startswith('[') and expression.endswith(']'):
+        try:
+            return eval(expression)
+        except Exception as e:
+            logger.error(f"Error evaluating list expression '{expression}': {e}")
+            return pd.Series([None] * len(df), index=df.index)
+
+    # Treat the expression as a string literal if it doesn't contain any operators or column names
+    if not any(op in expression for op in ['+', '-', '*', '/']) and expression not in df.columns:
+        if expression.isdigit():
+            return float(expression)
+        return expression.strip().strip("'").strip('"')  # Handle it as a string
+
+    # Replace column names with their corresponding series
+    for column in df.columns:
+        if column in expression:
+            expression = expression.replace(column, f"df['{column}']")
+
+    try:
+        return eval(expression)
+    except Exception as e:
+        logger.error(f"Error evaluating expression '{expression}': {e}")
+        return pd.Series([None] * len(df), index=df.index)
+
+def apply_if_then_rules(df, rules):
+    if not rules:
+        return df
+
+    for rule in rules:
+        try:
+            if "IF" in rule and "THEN" in rule:
+                if_part, then_else_part = rule.split("THEN", 1)
+                if_conditions = if_part.replace("IF", "").strip()
+
+                then_part, else_part = None, None
+                if "ELSE" in then_else_part:
+                    then_part, else_part = then_else_part.split("ELSE", 1)
+                else:
+                    then_part = then_else_part
+                
+                # Evaluate the IF condition
+                matches = eval_condition(if_conditions, df)
+
+                # Apply THEN action
+                if matches.any():
+                    action_field, action_value = parse_then_action(then_part.strip())
+                    if action_field not in df.columns:
+                        df[action_field] = None
+
+                    # Apply mathematical expression
+                    df.loc[matches, action_field] = evaluate_expression(action_value, df.loc[matches])
+
+                # Apply ELSE action
+                if else_part:
+                    non_matches = ~matches
+                    action_field, action_value = parse_then_action(else_part.strip())
+
+                    if action_field not in df.columns:
+                        df[action_field] = None
+
+                    # Apply mathematical expression
+                    df.loc[non_matches, action_field] = evaluate_expression(action_value, df.loc[non_matches])
+
+        except Exception as e:
+            logger.error(f"Error applying rule '{rule}': {e}")
+
+    return df
+
 
 def apply_filters_vectorized(df, filter_semantics):
     if not filter_semantics:
         return df
 
-    # logger.info("DataFrame before filtering:\n%s", df.head())  
-    
+    filtered_df = df.copy()
     for filter_condition in filter_semantics:
         try:
-            if '>=' in filter_condition:
-                field, condition = filter_condition.split('>=', 1)
-                field = field.strip()
-                condition = float(condition.strip())
-                if field in df.columns:
-                    df = df[df[field].astype(float) >= condition]
-                else:
-                    return pd.DataFrame()  # Return empty DataFrame if field is missing
-            elif '>' in filter_condition:
-                field, condition = filter_condition.split('>', 1)
-                field = field.strip()
-                condition = float(condition.strip())
-                if field in df.columns:
-                    df = df[df[field].astype(float) > condition]
-                else:
-                    return pd.DataFrame()  # Return empty DataFrame if field is missing
-            elif '<=' in filter_condition:
-                field, condition = filter_condition.split('<=', 1)
-                field = field.strip()
-                condition = float(condition.strip())
-                if field in df.columns:
-                    df = df[df[field].astype(float) <= condition]
-                else:
-                    return pd.DataFrame()  # Return empty DataFrame if field is missing
-            elif '<' in filter_condition:
-                field, condition = filter_condition.split('<', 1)
-                field = field.strip()
-                condition = float(condition.strip())
-                if field in df.columns:
-                    df = df[df[field].astype(float) < condition]
-                else:
-                    return pd.DataFrame()  # Return empty DataFrame if field is missing
-            elif '!=' in filter_condition:
-                field, condition = filter_condition.split('!=', 1)
-                field = field.strip()
-                condition = condition.strip()
-                if field in df.columns:
-                    try:
-                        df = df[df[field].astype(float) != float(condition)]
-                    except ValueError:
-                        df = df[df[field] != condition]
-                else:
-                    return pd.DataFrame()  # Return empty DataFrame if field is missing
-            elif '=' in filter_condition:
-                field, condition = filter_condition.split('=', 1)
-                field = field.strip()
-                condition = condition.strip()
-                if field in df.columns:
-                    try:
-                        df = df[df[field].astype(float) == float(condition)]
-                    except ValueError:
-                        df = df[df[field] == condition]
-                else:
-                    return pd.DataFrame()  # Return empty DataFrame if field is missing
+            matches = eval_condition(filter_condition, filtered_df)
+            filtered_df = filtered_df[matches]
+                
         except Exception as e:
             logger.error(f"Error applying filter '{filter_condition}': {e}")
 
-    return df
+    return filtered_df
 
 
+def parse_then_action(action):
+    if "=" in action:
+        field, value = action.split("=", 1)
+        return field.strip(), value.strip()
+    raise ValueError(f"Invalid action: {action}")
 
-async def process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics, additional_info=None):
+
+async def process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics, if_then_rules=None, additional_info=None):
     async with buffer_lock:
         df = pd.DataFrame(messages)
         mapped_data = mapped_values_vectorized(mapping, df)
-        filtered_data = apply_filters_vectorized(mapped_data, filter_semantics)
+
+        # Separate IF-THEN rules from regular filters
+        extracted_if_then_rules = [rule for rule in filter_semantics if "IF" in rule and "THEN" in rule]
+        remaining_filters = [f for f in filter_semantics if f not in extracted_if_then_rules]
+
+        # Apply the regular filters first, step by step
+        filtered_data = apply_filters_vectorized(mapped_data, remaining_filters)
+
+        # Apply IF-THEN rules to the filtered data
+        if extracted_if_then_rules:
+            filtered_data = apply_if_then_rules(filtered_data, extracted_if_then_rules)
+
+        # Use the final filtered data
         if not filtered_data.empty:
             if additional_info:
                 if isinstance(additional_info, dict):
@@ -100,8 +214,6 @@ async def process_and_send_data(messages, mapping, stream, send_data, buffer_loc
                     stream.extras['additional_info'] = additional_info
                 else:
                     stream.extras['additional_info'] = str(additional_info)
-            # logger.info("Filtered DataFrame:\n%s", filtered_data.head())
             await send_data(filtered_data, stream, loop)
         else:
-            pass
-            # logger.info("No data after filtering")
+            pass  # No data after filtering
