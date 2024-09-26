@@ -11,7 +11,30 @@ router = APIRouter()
     response_model=List[DataSourceResponse],
     summary="Search data sources",
     description=(
-        "Search datasets by various parameters."
+        "Search datasets by various parameters.\n\n"
+        "### Common registration-matching parameters\n"
+        "- **dataset_name**: the name of the dataset\n"
+        "- **dataset_title**: the title of the dataset\n"
+        "- **owner_org**: the name of the organization\n"
+        "- **resource_url**: the URL of the dataset resource\n"
+        "- **resource_name**: the name of the dataset resource\n"
+        "- **dataset_description**: the description of the dataset\n"
+        "- **resource_description**: the description of the dataset resource\n"
+        "- **resource_format**: the format of the dataset resource\n\n"
+        "### User-defined value search parameters\n"
+        "- **search_term**: a comma-separated list of terms to search across"
+        " all fields\n"
+        "- **timestamp**: a filter on the `timestamp` field of results."
+        " Timestamp can have one of two formats:\n\n"
+        "    `[<>]?YYYY(-MM(-DD(THH(:mm(:ss)))))` - the closeset timestamp"
+        " value to that which is provided. `>` (**default**) indicates the"
+        " closest in the future, while `<` indicates the closest"
+        " in the past.\n"
+        "    `(YYYY(-MM(-DD(THH(:mm(:ss))))))?/YYYY(-MM(-DD(THH(:mm(:ss)))))` "
+        "- filter results to the specified time interval. A missing timestamp"
+        " indicates an open interval.\n"
+        "### Unused parameters\n"
+        "- **server** - one of `local` or `global`"
     ),
     responses={
         200: {
@@ -56,7 +79,7 @@ router = APIRouter()
     }
 )
 async def search_datasource(
-     dataset_name: Optional[str] = Query(None, description="The name of the dataset."),
+    dataset_name: Optional[str] = Query(None, description="The name of the dataset."),
     dataset_title: Optional[str] = Query(None, description="The title of the dataset."),
     owner_org: Optional[str] = Query(None, description="The name of the organization."),
     resource_url: Optional[str] = Query(None, description="The URL of the dataset resource."),

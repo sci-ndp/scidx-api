@@ -7,6 +7,9 @@ from api.models import DataSourceResponse, Resource
 from api.services.default_services import log_retry_attempt
 
 def tstamp_to_query(timestamp):
+    """
+    Translate user-provided search timestamp search term into a SOLR query.
+    """
     tstamp_split = timestamp.split('/')
     if len(tstamp_split) > 2:
         raise ValueError("timestamp has too many range elements.")

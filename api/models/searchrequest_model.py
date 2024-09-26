@@ -38,7 +38,7 @@ class SearchRequest(BaseModel):
     )
     search_term: str = Field(
         None, 
-        description="A term to search across all fields.",
+        description="A comma-separated list of terms to search across all fields.",
     )
     filter_list: list[str] = Field(
         None,
