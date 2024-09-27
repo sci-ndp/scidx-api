@@ -11,12 +11,20 @@ def mapped_values_vectorized(mapping, df):
         result = df.copy()  # If no mapping is provided, include all columns
     else:
         for key, path in mapping.items():
-            if path in df.columns:
+            if '[' in path and ']' in path:
+                # Extract the field name and index
+                field, index = re.match(r"(.*)\[(\d+)\]", path).groups()
+                index = int(index)
+
+                if field in df.columns:
+                    result[key] = df[field].apply(lambda x: x[index] if isinstance(x, list) and len(x) > index else None)
+            elif path in df.columns:
                 if 'timestamp' in key.lower():
                     result[key] = pd.to_datetime(df[path], errors='coerce').dt.strftime('%Y-%m-%dT%H:%M:%SZ')
                 else:
                     result[key] = df[path]
     return result
+
 
 def eval_condition(condition, df):
     condition = condition.strip()
@@ -37,32 +45,30 @@ def eval_condition(condition, df):
         sub_conditions = condition.split(' AND ')
         return pd.concat([eval_condition(sub.strip(), df) for sub in sub_conditions], axis=1).all(axis=1)
 
-    # Now handle comparisons with possible math expressions
     field, operator, value = parse_condition(condition)
 
-    # Evaluate the value part for the IN operator
+    if '[' in field and ']' in field:
+        field_name, field_index = re.match(r"(.*)\[(\d+)\]", field).groups()
+        field_index = int(field_index)
+        field_values = df[field_name].apply(lambda x: x[field_index] if isinstance(x, list) and len(x) > field_index else None)
+    else:
+        field_values = evaluate_expression(field, df)
+
     if operator == 'IN':
         try:
-            # Properly handle the list conversion
-            value_list = eval(value) if isinstance(value, str) and value.startswith('[') and value.endswith(']') else value
+            value_list = eval(value) if isinstance(value, str) else value
             if not isinstance(value_list, list):
                 logger.error(f"Invalid list for IN condition: '{value}' in condition '{condition}'")
                 return pd.Series([False] * len(df), index=df.index)
         except Exception as e:
             logger.error(f"Error parsing list for IN condition: '{value}' in condition '{condition}': {e}")
             return pd.Series([False] * len(df), index=df.index)
+        return field_values.isin(value_list)
+    
     else:
         value_values = evaluate_expression(value, df)
 
-    if field in df.columns:
-        field_values = evaluate_expression(field, df)
-    else:
-        try:
-            field_values = float(field)
-        except ValueError:
-            field_values = field.strip().strip("'").strip('"')
-
-    # Apply the comparison including the IN operator
+    # Apply the comparison
     if operator == '>=':
         return field_values >= value_values
     elif operator == '>':
@@ -75,10 +81,9 @@ def eval_condition(condition, df):
         return field_values != value_values
     elif operator == '=':
         return field_values == value_values
-    elif operator == 'IN':
-        return field_values.isin(value_list)
 
     return pd.Series([False] * len(df), index=df.index)
+
 
 def parse_condition(condition):
     # Adjust to capture the 'IN' condition correctly
