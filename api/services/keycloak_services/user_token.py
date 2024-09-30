@@ -1,6 +1,8 @@
 import requests
+import logging
 
 from api.config import keycloak_settings
+logger = logging.getLogger(__name__)
 
 def get_user_token(username, password):
     url = f"{keycloak_settings.keycloak_url}/realms/" + \
@@ -15,6 +17,10 @@ def get_user_token(username, password):
     headers = {
         "Content-Type": "application/x-www-form-urlencoded"
     }
+    
+
     response = requests.post(url, data=data, headers=headers)
+    logger.info(response.text)
+    
     response.raise_for_status()
     return response.json()["access_token"]
