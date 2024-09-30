@@ -6,6 +6,44 @@ from api.config.ckan_settings import ckan_settings
 from api.models import DataSourceResponse, Resource
 from api.services.default_services import log_retry_attempt
 
+def tstamp_to_query(timestamp):
+    """
+    Translate user-provided search timestamp search term into a SOLR query.
+    """
+    tstamp_split = timestamp.split('/')
+    if len(tstamp_split) > 2:
+        raise ValueError("timestamp has too many range elements.")
+    if len(tstamp_split) == 1:
+        # This is a nearest-in-time query, default to nearest in the future
+        next_highest = True
+        if timestamp[0] == '<':
+            # query is for nearest in the past
+            next_highest = False
+        if timestamp[0] in '<>':
+            nearest_time = timestamp[1:]
+        else:
+            nearest_time = timestamp
+        sort = 'timestamp'
+        count_max = 1
+        if next_highest:
+            fq = f'timestamp:[{nearest_time} TO *]'
+            sort = sort + ' asc'
+        else:
+            fq = f'timestamp:[* TO {nearest_time}]'
+            sort = sort + ' desc'
+    else:
+        # this is a range query
+        start_time = tstamp_split[0]
+        if start_time == '':
+            start_time = '*'
+        end_time = tstamp_split[1]
+        if end_time == '':
+            end_time = '*'
+        count_max = None
+        sort = 'timetamp asc'
+        fq = f'timestamp:[{start_time} TO {end_time}]'
+    return(fq, count_max, sort)
+
 @retry(
     wait=wait_exponential(multiplier=1, max=2),
     stop=stop_after_attempt(5),
@@ -22,6 +60,8 @@ async def search_datasource(
     resource_description: Optional[str] = None,
     resource_format: Optional[str] = None,
     search_term: Optional[str] = None,
+    filter_list: Optional[list[str]] = None,
+    timestamp: Optional[str] = None,
     server: Optional[str] = "local"
 ) -> List[DataSourceResponse]:
     if server not in ["local", "global"]:
@@ -33,6 +73,9 @@ async def search_datasource(
         ckan = ckan_settings.ckan_global
 
     search_params = []
+
+    if filter_list:
+        search_params.extend(filter_list)
 
     if search_term:
         search_params.append(search_term)
@@ -46,10 +89,44 @@ async def search_datasource(
         if dataset_description:
             search_params.append(f'notes:{dataset_description}')
 
+    fq_list = []
+
     query_string = " AND ".join(search_params) if search_params else "*:*"
 
+    count_max = None
+    sort = None
+    if timestamp:
+        (fq_tstamp, count_max, sort) = tstamp_to_query(timestamp)
+        fq_list.append(fq_tstamp)
+    
+    rows = 1000
+    if count_max and count_max < rows:
+        rows = count_max
+    
     try:
-        datasets = ckan.action.package_search(q=query_string, rows=1000)  # Adjust rows as needed
+        start = 0
+        datasets = None
+        while True:
+            data_dict = {'q': query_string,
+                         'fq_list': fq_list,
+                         'rows': rows,
+                         'start': start}
+            if sort:
+                data_dict['sort'] = sort
+            results = ckan.action.package_search(**data_dict)
+            if results and results['results']:
+                if datasets:
+                    datasets['results'].extend(results['results'])
+                else:
+                    datasets = results
+            else:
+                if not datasets:
+                    datasets = results
+                break
+            start = start + len(results['results'])
+            if count_max and start >= count_max:
+                break
+
         results = []
 
         for dataset in datasets['results']:

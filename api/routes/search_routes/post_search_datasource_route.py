@@ -1,30 +1,42 @@
 from fastapi import APIRouter, HTTPException, Body
 from typing import List, Optional, Literal
 from api.services import datasource_services
-from api.models import DataSourceResponse
+from api.models import DataSourceResponse, SearchRequest
 from tenacity import RetryError
 from pydantic import BaseModel
 
 router = APIRouter()
 
-class SearchPayload(BaseModel):
-    dataset_name: Optional[str] = None
-    dataset_title: Optional[str] = None
-    owner_org: Optional[str] = None
-    resource_url: Optional[str] = None
-    resource_name: Optional[str] = None
-    dataset_description: Optional[str] = None
-    resource_description: Optional[str] = None
-    resource_format: Optional[str] = None
-    search_term: Optional[str] = None
-    server: Optional[Literal['local', 'global']] = 'local'
-
-
 @router.post(
     "/search",
     response_model=List[DataSourceResponse],
     summary="Search data sources",
-    description="Search datasets by various parameters.",
+    description=("Search datasets by various parameters.\n\n"
+        "### Common registration-matching parameters\n"
+        "- **dataset_name**: the name of the dataset\n"
+        "- **dataset_title**: the title of the dataset\n"
+        "- **owner_org**: the name of the organization\n"
+        "- **resource_url**: the URL of the dataset resource\n"
+        "- **resource_name**: the name of the dataset resource\n"
+        "- **dataset_description**: the description of the dataset\n"
+        "- **resource_description**: the description of the dataset resource\n"
+        "- **resource_format**: the format of the dataset resource\n\n"
+        "### User-defined value search parameters\n"
+        "- **search_term**: a comma-separated list of terms to search across"
+        " all fields\n"
+        "- **filter_list**: a list of field filters of the form `key:value`.\n"
+        "- **timestamp**: a filter on the `timestamp` field of results."
+        " Timestamp can have one of two formats:\n\n"
+        "    `[<>]?YYYY(-MM(-DD(THH(:mm(:ss)))))` - the closeset timestamp"
+        " value to that which is provided. `>` (**default**) indicates the"
+        " closest in the future, while `<` indicates the closest"
+        " in the past.\n"
+        "    `(YYYY(-MM(-DD(THH(:mm(:ss))))))?/YYYY(-MM(-DD(THH(:mm(:ss)))))` "
+        "- filter results to the specified time interval. A missing timestamp"
+        " indicates an open interval.\n"
+        "### Unused parameters\n"
+        "- **server** - one of `local` or `global`"
+    ),
     responses={
         200: {
             "description": "Datasets retrieved successfully",
@@ -68,15 +80,15 @@ class SearchPayload(BaseModel):
     }
 )
 async def search_datasource(
-    payload: SearchPayload = Body(...)
+    data: SearchRequest,
 ):
     """
-    Endpoint to search by various parameters using a POST request.
+    Search by various parameters.
 
     Parameters
     ----------
-    payload : SearchPayload
-        The search parameters as a JSON object.
+    data : SearchRequest
+        An object containing the parameters of the search
 
     Returns
     -------
@@ -86,24 +98,17 @@ async def search_datasource(
     Raises
     ------
     HTTPException
-        If there is an error searching for the datasets, an HTTPException is raised with a detailed message.
+        If there is an error searching for the datasets, an HTTPException is 
+        raised with a detailed message.
     """
     try:
-        results = await datasource_services.search_datasource(
-            dataset_name=payload.dataset_name,
-            dataset_title=payload.dataset_title,
-            owner_org=payload.owner_org,
-            resource_url=payload.resource_url,
-            resource_name=payload.resource_name,
-            dataset_description=payload.dataset_description,
-            resource_description=payload.resource_description,
-            resource_format=payload.resource_format.lower() if payload.resource_format else None,
-            search_term=payload.search_term,
-            server=payload.server
-        )
+        if 'resource_format' in data:
+            data['resource_format'] = data['resource_format'].lower()
+        results = await datasource_services.search_datasource(**data.dict())
         return results
     except RetryError as e:
         final_exception = e.last_attempt.exception()
         raise HTTPException(status_code=400, detail=str(final_exception))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+

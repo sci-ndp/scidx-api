@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional, Literal
 from api.services import datasource_services
-from api.models import DataSourceResponse
+from api.models import DataSourceResponse, SearchRequest
 from tenacity import RetryError
 
 router = APIRouter()
@@ -10,7 +10,32 @@ router = APIRouter()
     "/search",
     response_model=List[DataSourceResponse],
     summary="Search data sources",
-    description="Search datasets by various parameters.",
+    description=(
+        "Search datasets by various parameters.\n\n"
+        "### Common registration-matching parameters\n"
+        "- **dataset_name**: the name of the dataset\n"
+        "- **dataset_title**: the title of the dataset\n"
+        "- **owner_org**: the name of the organization\n"
+        "- **resource_url**: the URL of the dataset resource\n"
+        "- **resource_name**: the name of the dataset resource\n"
+        "- **dataset_description**: the description of the dataset\n"
+        "- **resource_description**: the description of the dataset resource\n"
+        "- **resource_format**: the format of the dataset resource\n\n"
+        "### User-defined value search parameters\n"
+        "- **search_term**: a comma-separated list of terms to search across"
+        " all fields\n"
+        "- **timestamp**: a filter on the `timestamp` field of results."
+        " Timestamp can have one of two formats:\n\n"
+        "    `[<>]?YYYY(-MM(-DD(THH(:mm(:ss)))))` - the closeset timestamp"
+        " value to that which is provided. `>` (**default**) indicates the"
+        " closest in the future, while `<` indicates the closest"
+        " in the past.\n"
+        "    `(YYYY(-MM(-DD(THH(:mm(:ss))))))?/YYYY(-MM(-DD(THH(:mm(:ss)))))` "
+        "- filter results to the specified time interval. A missing timestamp"
+        " indicates an open interval.\n"
+        "### Unused parameters\n"
+        "- **server** - one of `local` or `global`"
+    ),
     responses={
         200: {
             "description": "Datasets retrieved successfully",
@@ -63,6 +88,7 @@ async def search_datasource(
     resource_description: Optional[str] = Query(None, description="The description of the dataset resource."),
     resource_format: Optional[str] = Query(None, description="The format of the dataset resource."),
     search_term: Optional[str] = Query(None, description="A term to search across all fields."),
+    timestamp: Optional[str] = Query(None, description="A time range term to filter results."),
     server: Optional[Literal['local', 'global']] = Query(
         'local', description="Specify the server to search on: 'local' or 'global'."
     )
@@ -90,6 +116,8 @@ async def search_datasource(
         The format of the dataset resource.
     search_term : Optional[str]
         A term to search across all fields. Multiple values can be provided, separated by commas.
+    timestamp: Optional[str]
+        A time range term to filter results.
     server : Optional[str]
         Specify the server to search on: 'local' or 'global'.
 
@@ -115,6 +143,7 @@ async def search_datasource(
             resource_description=resource_description,
             resource_format=resource_format.lower() if resource_format else None,
             search_term=search_term,
+            timestamp=timestamp,
             server=server
         )
         return results

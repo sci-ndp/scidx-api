@@ -29,6 +29,7 @@ cd scidx-api
    cp ./env_variables/.env_ckan.example ./env_variables/.env_ckan
    cp ./env_variables/.env_keycloak.example ./env_variables/.env_keycloak
    cp ./env_variables/.env_swagger.example ./env_variables/.env_swagger
+   cp /env_variables/.env_dxspaces.example ./env_variables/.env_dxspaces
 
    ```
 
@@ -83,3 +84,8 @@ Once the application is running, you can access the sciDX API at:
 - **Docker environment**: `http://localhost:8000`
 
 Return to [README](../README.md).
+
+# Enable Staging
+To enable beta support for data staging, append the contents of `requirements-staging.txt` to `requirements.txt`. A DXSpaces server must be available to both the sciDX API server, as well as any client in ordere to take full advantage of user query capabilities. Connection information is passed through the `DXSPACES_URL` environment variable. 
+
+The environment variable `DXSPACES_REGISTRATION` controls which registrations are reported to DXSpaces, provided a DXSpaces server is configured. This is a comma-separated list of methods, `all`, or `none`. Supported methods are currently: `url` and `s3`.

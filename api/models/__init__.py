@@ -3,3 +3,4 @@ from .datasourceresponse_model import DataSourceResponse
 from .datasourceresponse_model import Resource
 from .organizationrequest_model import OrganizationRequest
 from .organizationdeleterequest_model import OrganizationDeleteRequest
+from .searchrequest_model import SearchRequest
