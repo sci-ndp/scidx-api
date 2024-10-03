@@ -59,8 +59,8 @@ def test_create_search_and_delete_datasource_with_org():
         "resource_url": "http://example.com/resource",
         "resource_name": resource_name,
         "dataset_description": "This is a test dataset.",
-        "resource_description": "This is a test resource.",
-        "resource_format": "CSV",
+        "resource_description": "Resource pointing to http://example.com/resource",
+        "resource_format": "s3",
         "search_term": "test",
         "server": "local"
     }
@@ -72,7 +72,7 @@ def test_create_search_and_delete_datasource_with_org():
     assert len(search_results) > 0
 
     # Step 4: Delete the dataset
-    delete_response = client.delete(f"/{resource_name}", headers=headers)
+    delete_response = client.delete(f"/resource/{resource_name}", headers=headers)
     assert delete_response.status_code == 200
     
     delete_data = delete_response.json()

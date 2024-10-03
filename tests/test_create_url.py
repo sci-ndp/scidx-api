@@ -24,14 +24,22 @@ def test_create_and_delete_url_resource_with_org(file_type, processing):
     headers = {
         "Authorization": f"Bearer {keycloak_settings.test_username}"
     }
-    
+   
+    resource_url_dict = {
+            "stream": "http://example.com/resource",
+            "CSV": "http://example.com/resource.csv",
+            "TXT": "http://example.com/resource.txt",
+            "JSON": "http://example.com/resource.json",
+            "NetCDF": "http://example.com/resource.nc"
+    }
+
     # Step 1: Create the organization
     org_payload = {
         "name": org_name,
         "title": "Test Organization",
         "description": "This is a test organization."
     }
-    
+   
     create_org_response = client.post("/organization", json=org_payload, headers=headers)
     assert create_org_response.status_code == 201
     
@@ -43,7 +51,7 @@ def test_create_and_delete_url_resource_with_org(file_type, processing):
         "resource_name": resource_name,
         "resource_title": f"{file_type} Resource Test",
         "owner_org": org_name,
-        "resource_url": "http://example.com/resource",
+        "resource_url": resource_url_dict[file_type],
         "file_type": file_type,
         "notes": "This is a test URL resource.",
         "extras": {
@@ -68,7 +76,7 @@ def test_create_and_delete_url_resource_with_org(file_type, processing):
     print(f"Resource created with ID: {resource_id}")
 
     # Step 3: Delete the URL resource
-    delete_response = client.delete(f"/{resource_id}", headers=headers)
+    delete_response = client.delete(f"/resource/{resource_name}", headers=headers)
     
     # Print the error detail if the deletion fails
     if delete_response.status_code != 200:

@@ -65,7 +65,7 @@ def test_create_and_delete_kafka_resource_with_org():
     print(f"Dataset created with ID: {dataset_id}")
 
     # Step 3: Delete the Kafka resource
-    delete_response = client.delete(f"/{dataset_id}", headers=headers)
+    delete_response = client.delete(f"/resource/{dataset_name}", headers=headers)
     
     # Print the error detail if the deletion fails
     if delete_response.status_code != 200:
