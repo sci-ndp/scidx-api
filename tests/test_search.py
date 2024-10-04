@@ -4,7 +4,6 @@ from api.main import app
 from api.config import keycloak_settings
 import random
 import string
-import json
 
 client = TestClient(app)
 
@@ -127,9 +126,7 @@ def test_create_search_and_delete_timestamped_datasource_with_org():
                 "timestamp": timestamp
             }
         }
-        print(url_payload)
         create_url_response = client.post("/url", json=url_payload, headers=headers)
-        print(create_url_response.json())
         assert create_url_response.status_code == 201
     
         create_dataset_data = create_url_response.json()
