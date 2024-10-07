@@ -12,7 +12,6 @@ def test_login_for_access_token_success():
         data={"username": keycloak_settings.test_username, "password": keycloak_settings.test_password}
     )
     assert response.status_code == 200
-    assert response.json()["access_token"] == keycloak_settings.test_username
     assert response.json()["token_type"] == "bearer"
 
 

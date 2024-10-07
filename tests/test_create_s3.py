@@ -55,7 +55,7 @@ def test_create_and_delete_s3_resource_with_org():
     print(f"Resource created with ID: {resource_id}")
 
     # Step 3: Delete the S3 resource
-    delete_response = client.delete(f"/{resource_id}", headers=headers)
+    delete_response = client.delete(f"/resource/{resource_name}", headers=headers)
     
     # Print the error detail if the deletion fails
     if delete_response.status_code != 200:
