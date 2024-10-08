@@ -20,7 +20,7 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
     processing = stream.extras.get('processing', {})
     data_key = processing.get('data_key', None)
     info_key = processing.get('info_key', None)
-    
+
     logger.info(f"Processing Kafka stream: {kafka_topic} from {kafka_host}:{kafka_port} with mapping {mapping}")
 
     consumer = AIOKafkaConsumer(
@@ -36,6 +36,7 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
         last_send_time = time.time()
         messages = []
         additional_info = None
+        timeout_counter = 0
 
         while True:
             try:
@@ -50,22 +51,23 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
                 
                 messages.append(data)
 
+                # Reset timeout_counter since we received a message
+                timeout_counter = 0
+
             except asyncio.TimeoutError:
                 logger.info("No new messages received in TIME_WINDOW")
+                timeout_counter += 1
 
-            elapsed_time = loop.time() - start_time
-            time_since_last_send = time.time() - last_send_time
-
-            # Check if it's time to send the accumulated messages
-            if len(messages) >= CHUNK_SIZE or time_since_last_send >= TIME_WINDOW or elapsed_time >= TIME_WINDOW:
-                await process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics, additional_info)
-                messages.clear()  # Clear messages after sending
-                start_time = loop.time()
-                last_send_time = time.time()
-
-            # If no more messages, break the loop
-            if not messages and time_since_last_send >= TIME_WINDOW:
+            # If no new messages for multiple time windows, break the loop
+            if timeout_counter >= 3:
+                logger.info(f"No new messages received for {6 * TIME_WINDOW} seconds. Stopping the stream.")
                 break
+
+            # Send data after the time window or chunk size is met
+            if len(messages) >= CHUNK_SIZE or time.time() - last_send_time >= TIME_WINDOW:
+                await process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics, additional_info)
+                messages.clear()
+                last_send_time = time.time()
 
         # Send any remaining messages
         if messages:
@@ -73,6 +75,5 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
 
     except Exception as e:
         logger.error(f"Error in Kafka stream processing: {e}")
-
     finally:
         await consumer.stop()
