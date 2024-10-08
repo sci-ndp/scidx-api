@@ -7,6 +7,7 @@ from api.config.kafka_settings import kafka_settings
 import logging
 from fastapi.responses import StreamingResponse
 import requests
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -62,13 +63,14 @@ async def get_kafka_stream(
             port = kafka_resource.get("port", kafka_settings.kafka_port)
 
         if topic and host and port:
+            # Call generator with the added logic to stop on client disconnect
             return StreamingResponse(
-                consume_kafka_data(topic=topic, host=host, port=port, use_compression=False),
+                kafka_event_generator(topic=topic, host=host, port=port, use_compression=False),
                 media_type="text/event-stream"
             )
         elif topic:
             return StreamingResponse(
-                consume_kafka_data(topic=topic),
+                kafka_event_generator(topic=topic),
                 media_type="text/event-stream"
             )
         else:
@@ -77,3 +79,17 @@ async def get_kafka_stream(
     except Exception as e:
         logger.error(f"Error retrieving stream data: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+async def kafka_event_generator(topic: str, host: Optional[str] = None, port: Optional[int] = None, use_compression: bool = True):
+    consumer_generator = consume_kafka_data(topic=topic, host=host, port=port, use_compression=use_compression)
+    
+    try:
+        # Iterate over the generator (do not use `await` here)
+        async for message in consumer_generator:
+            yield message
+    except asyncio.CancelledError:
+        logger.info(f"Client disconnected from stream: {topic}. Closing consumer.")
+        await consumer_generator.aclose()  # Ensure the consumer is stopped when client disconnects
+    finally:
+        logger.info(f"Kafka consumer stopped for topic: {topic}.")

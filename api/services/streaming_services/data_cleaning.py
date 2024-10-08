@@ -23,7 +23,10 @@ def mapped_values_vectorized(mapping, df):
                     result[key] = pd.to_datetime(df[path], errors='coerce').dt.strftime('%Y-%m-%dT%H:%M:%SZ')
                 else:
                     result[key] = df[path]
+            else:
+                logger.warning(f"Mapping key '{key}' does not exist in dataframe.")
     return result
+
 
 
 def eval_condition(condition, df):
