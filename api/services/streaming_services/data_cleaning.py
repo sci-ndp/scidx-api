@@ -23,7 +23,10 @@ def mapped_values_vectorized(mapping, df):
                     result[key] = pd.to_datetime(df[path], errors='coerce').dt.strftime('%Y-%m-%dT%H:%M:%SZ')
                 else:
                     result[key] = df[path]
+            else:
+                logger.warning(f"Mapping key '{key}' does not exist in dataframe.")
     return result
+
 
 
 def eval_condition(condition, df):
@@ -175,16 +178,25 @@ def apply_filters_vectorized(df, filter_semantics):
     if not filter_semantics:
         return df
 
+    # Attempt to convert all numeric-like columns to float
+    for column in df.columns:
+        try:
+            df[column] = pd.to_numeric(df[column], errors='raise')
+        except (ValueError, TypeError):
+            # If the column cannot be converted to numeric, leave it as is
+            continue
+
     filtered_df = df.copy()
     for filter_condition in filter_semantics:
         try:
             matches = eval_condition(filter_condition, filtered_df)
             filtered_df = filtered_df[matches]
-                
         except Exception as e:
             logger.error(f"Error applying filter '{filter_condition}': {e}")
 
     return filtered_df
+
+
 
 
 def parse_then_action(action):

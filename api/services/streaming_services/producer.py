@@ -5,8 +5,8 @@ from uuid import uuid4
 from aiokafka import AIOKafkaProducer
 from api.config.kafka_settings import kafka_settings
 from .compressor import compress_data
-from .stream_processing.kafka import process_kafka_stream
-from .stream_processing.url import process_url_stream
+from .stream_processing.kafka_manager import process_kafka_stream
+from .stream_processing.url_manager import process_url_stream
 
 KAFKA_SERVER = f"{kafka_settings.kafka_host}:{kafka_settings.kafka_port}"
 
@@ -50,7 +50,8 @@ class Producer:
                     self.filter_semantics,
                     self.buffer_lock,
                     self.send_data,
-                    self.loop
+                    self.loop,
+                    self.stop_event
                 )
             elif resource.format == 'url':
                 stop_event = asyncio.Event()  
