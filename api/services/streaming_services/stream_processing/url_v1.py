@@ -33,20 +33,35 @@ async def process_url_stream(stream, filter_semantics, buffer_lock, send_data, l
 
     while retries < RETRY_LIMIT:
         try:
-            if file_type in ['CSV', 'TXT', 'NetCDF']:
-                # For file-based content: process and stop after completion
-                logger.info(f"Fetching data for file-based type ({file_type})...")
+            if file_type == 'TXT':
+                # For TXT files
+                logger.info(f"Fetching data for TXT file...")
                 response = requests.get(resource_url)
-                response.raise_for_status()  # Raise an exception for bad status codes
+                response.raise_for_status()
 
-                logger.info(f"Successfully fetched data for {file_type}")
+                await process_txt_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
+                logger.info(f"Finished processing TXT file.")
+                return
 
-                if file_type in ['CSV', 'TXT']:
-                    await process_csv_txt_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
-                elif file_type == 'NetCDF':
-                    await process_netcdf_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
+            elif file_type == 'CSV':
+                # For CSV files
+                logger.info(f"Fetching data for CSV file...")
+                response = requests.get(resource_url)
+                response.raise_for_status()
 
-                logger.info(f"Finished processing {file_type} file, no need to retry.")
+                await process_csv_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
+                logger.info(f"Finished processing CSV file.")
+                return
+            
+            elif file_type == 'NetCDF':
+                # For NetCDF files
+                logger.info(f"Fetching data for NetCDF file...")
+                response = requests.get(resource_url)
+                response.raise_for_status()
+                
+                await process_netcdf_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics)
+
+                logger.info(f"Finished processing NetCDF file.")
                 return  # Exit once the file has been processed successfully
 
             elif file_type == 'json':
@@ -84,56 +99,46 @@ async def process_url_stream(stream, filter_semantics, buffer_lock, send_data, l
 
     logger.error(f"Retry limit reached ({RETRY_LIMIT}), giving up on {resource_url}")
 
-async def process_csv_txt_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
-    delimiter = processing.get('delimiter')
+async def process_txt_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
+    delimiter = processing.get('delimiter', '\t')  # Default to tab-delimited for TXT
     header_line = processing.get('header_line')
     start_line = processing.get('start_line')
 
     # If any processing info is missing, attempt automatic detection
     if delimiter is None or header_line is None or start_line is None:
-        
         sample_data = response.text[:4096]  # Sample the first 4KB of data
         detected_delimiter, detected_header_line, detected_start_line = detect_csv_parameters(sample_data)
         delimiter = delimiter or detected_delimiter
         header_line = header_line if header_line is not None else detected_header_line
         start_line = start_line if start_line is not None else detected_start_line
 
-    # Set defaults if still None
-    if delimiter is None:
-        delimiter = ',' if stream.extras.get('file_type') == 'CSV' else '\t'
-    if header_line is None:
-        header_line = 0
-    if start_line is None:
-        start_line = header_line + 1
-
-    csv_data = StringIO(response.text)
+    txt_data = StringIO(response.text)
 
     # Read the first chunk to capture column headers
     first_chunk = pd.read_csv(
-        csv_data,
+        txt_data,
         delimiter=delimiter,
         header=header_line,
         nrows=CHUNK_SIZE,
         skiprows=range(1, start_line) if start_line > 1 else None
     )
+
     if first_chunk.empty:
-        logger.error("No data found in the CSV/TXT stream.")
+        logger.error("No data found in the TXT stream.")
         return
 
-    # Extract column names from the first chunk
     column_names = first_chunk.columns.tolist()
 
     start_time = loop.time()
     last_send_time = time.time()
 
     while True:
-        # Read the next chunk and use the same column names
         chunk = pd.read_csv(
-            csv_data,
+            txt_data,
             delimiter=delimiter,
             header=None,  # No header for subsequent chunks
             nrows=CHUNK_SIZE,
-            names=column_names,  # Reapply column names
+            names=column_names,
             skiprows=range(1, start_line) if start_line > 1 else None
         )
 
@@ -157,6 +162,87 @@ async def process_csv_txt_stream(response, processing, mapping, stream, send_dat
             break
 
         last_send_time = time.time()
+
+
+async def process_csv_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
+    delimiter = processing.get('delimiter')
+    header_line = processing.get('header_line')
+    start_line = processing.get('start_line')
+
+    # If any processing info is missing, attempt automatic detection
+    if delimiter is None or header_line is None or start_line is None:
+        sample_data = response.text[:4096]  # Sample the first 4KB of data
+        detected_delimiter, detected_header_line, detected_start_line = detect_csv_parameters(sample_data)
+        delimiter = delimiter or detected_delimiter
+        header_line = header_line if header_line is not None else detected_header_line
+        start_line = start_line if start_line is not None else detected_start_line
+
+    csv_data = StringIO(response.text)
+
+    # Reset the read position to the start for every new chunk
+    csv_data.seek(0)
+
+    # Read the first chunk to capture column headers
+    first_chunk = pd.read_csv(
+        csv_data,
+        delimiter=delimiter,
+        header=header_line,
+        nrows=CHUNK_SIZE,
+        skiprows=range(1, start_line) if start_line > 1 else None
+    )
+
+    if first_chunk.empty:
+        logger.error("No data found in the CSV stream.")
+        return
+
+    # Extract column names from the first chunk
+    column_names = first_chunk.columns.tolist()
+
+    # Process the first chunk of data (excluding the header row)
+    await process_and_send_data(
+        first_chunk.to_dict(orient='records'),
+        mapping,
+        stream,
+        send_data,
+        buffer_lock,
+        loop,
+        filter_semantics
+    )
+
+    start_time = loop.time()
+    last_send_time = time.time()
+
+    while True:
+        # Read the next chunk
+        chunk = pd.read_csv(
+            csv_data,
+            delimiter=delimiter,
+            header=None,  # No header for subsequent chunks
+            nrows=CHUNK_SIZE,
+            names=column_names  # Use the previously extracted column names
+        )
+
+        if chunk.empty:
+            break  # No more data to process
+
+        await process_and_send_data(
+            chunk.to_dict(orient='records'),
+            mapping,
+            stream,
+            send_data,
+            buffer_lock,
+            loop,
+            filter_semantics
+        )
+
+        elapsed_time = loop.time() - start_time
+        time_since_last_send = time.time() - last_send_time
+
+        if time_since_last_send >= TIME_WINDOW or elapsed_time >= TIME_WINDOW:
+            break
+
+        last_send_time = time.time()
+
 
 async def process_json_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
     try:

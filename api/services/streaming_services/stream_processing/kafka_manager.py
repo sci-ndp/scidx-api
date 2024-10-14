@@ -12,7 +12,7 @@ CHUNK_SIZE = 10000
 TIME_WINDOW = 10  # seconds
 
 
-async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data, loop):
+async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data, loop, stop_event):
     kafka_host = stream.extras['host']
     kafka_port = stream.extras['port']
     kafka_topic = stream.extras['topic']
@@ -38,7 +38,7 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
         additional_info = None
         timeout_counter = 0
 
-        while True:
+        while not stop_event.is_set():  # Add stop_event to allow graceful shutdown
             try:
                 message = await asyncio.wait_for(consumer.getone(), timeout=TIME_WINDOW)
                 data = json.loads(message.value)
@@ -76,4 +76,5 @@ async def process_kafka_stream(stream, filter_semantics, buffer_lock, send_data,
     except Exception as e:
         logger.error(f"Error in Kafka stream processing: {e}")
     finally:
+        logger.info(f"Shutting down Kafka consumer for topic: {kafka_topic}")
         await consumer.stop()

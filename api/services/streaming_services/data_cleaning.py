@@ -178,16 +178,25 @@ def apply_filters_vectorized(df, filter_semantics):
     if not filter_semantics:
         return df
 
+    # Attempt to convert all numeric-like columns to float
+    for column in df.columns:
+        try:
+            df[column] = pd.to_numeric(df[column], errors='raise')
+        except (ValueError, TypeError):
+            # If the column cannot be converted to numeric, leave it as is
+            continue
+
     filtered_df = df.copy()
     for filter_condition in filter_semantics:
         try:
             matches = eval_condition(filter_condition, filtered_df)
             filtered_df = filtered_df[matches]
-                
         except Exception as e:
             logger.error(f"Error applying filter '{filter_condition}': {e}")
 
     return filtered_df
+
+
 
 
 def parse_then_action(action):
