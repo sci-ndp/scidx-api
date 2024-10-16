@@ -23,6 +23,8 @@ def mapped_values_vectorized(mapping, df):
                     result[key] = pd.to_datetime(df[path], errors='coerce').dt.strftime('%Y-%m-%dT%H:%M:%SZ')
                 else:
                     result[key] = df[path]
+            else:
+                logger.warning(f"Mapping key '{key}' does not exist in dataframe.")
     return result
 
 
@@ -95,6 +97,7 @@ def parse_condition(condition):
             return field.strip(), op, value.strip()
     raise ValueError(f"Invalid condition: {condition}")
 
+
 def evaluate_expression(expression, df):
     """
     Evaluate mathematical expressions, literal strings, or lists in the context of the dataframe.
@@ -125,6 +128,7 @@ def evaluate_expression(expression, df):
     except Exception as e:
         logger.error(f"Error evaluating expression '{expression}': {e}")
         return pd.Series([None] * len(df), index=df.index)
+
 
 def apply_if_then_rules(df, rules):
     if not rules:
@@ -175,12 +179,19 @@ def apply_filters_vectorized(df, filter_semantics):
     if not filter_semantics:
         return df
 
+    # Attempt to convert all numeric-like columns to float
+    for column in df.columns:
+        try:
+            df[column] = pd.to_numeric(df[column], errors='raise')
+        except (ValueError, TypeError):
+            # If the column cannot be converted to numeric, leave it as is
+            continue
+
     filtered_df = df.copy()
     for filter_condition in filter_semantics:
         try:
             matches = eval_condition(filter_condition, filtered_df)
             filtered_df = filtered_df[matches]
-                
         except Exception as e:
             logger.error(f"Error applying filter '{filter_condition}': {e}")
 

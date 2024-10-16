@@ -28,9 +28,9 @@ def mapped_values_vectorized(mapping, df):
     return result
 
 
-
 def eval_condition(condition, df):
-    condition = condition.strip()
+    # Normalize the condition by stripping unnecessary spaces
+    condition = re.sub(r'\s+', ' ', condition.strip())
 
     # Handling parentheses first (recursive evaluation of conditions inside parentheses)
     while '(' in condition and ')' in condition:
@@ -71,32 +71,34 @@ def eval_condition(condition, df):
     else:
         value_values = evaluate_expression(value, df)
 
-    # Apply the comparison
-    if operator == '>=':
-        return field_values >= value_values
-    elif operator == '>':
-        return field_values > value_values
-    elif operator == '<=':
-        return field_values <= value_values
-    elif operator == '<':
-        return field_values < value_values
-    elif operator == '!=':
-        return field_values != value_values
-    elif operator == '=':
-        return field_values == value_values
-
+    # Apply the comparison (normalize whitespace in operator and condition)
+    comparison_map = {
+        '>=': field_values >= value_values,
+        '>': field_values > value_values,
+        '<=': field_values <= value_values,
+        '<': field_values < value_values,
+        '!=': field_values != value_values,
+        '=': field_values == value_values,
+    }
+    result = comparison_map.get(operator)
+    if result is not None:
+        return result
+    logger.error(f"Unknown operator '{operator}' in condition '{condition}'")
     return pd.Series([False] * len(df), index=df.index)
 
 
 def parse_condition(condition):
-    # Adjust to capture the 'IN' condition correctly
+    # Normalize spacing in condition string
+    condition = re.sub(r'\s+', ' ', condition)
+    
+    # Capture the 'IN' condition correctly
     operators = ['>=', '>', '<=', '<', '!=', '=', 'IN']
     for op in operators:
-        # Use regex to correctly identify the IN condition especially with lists
         if f" {op} " in condition:
             field, value = re.split(rf'\s{op}\s', condition, maxsplit=1)
             return field.strip(), op, value.strip()
     raise ValueError(f"Invalid condition: {condition}")
+
 
 def evaluate_expression(expression, df):
     """
@@ -128,6 +130,7 @@ def evaluate_expression(expression, df):
     except Exception as e:
         logger.error(f"Error evaluating expression '{expression}': {e}")
         return pd.Series([None] * len(df), index=df.index)
+
 
 def apply_if_then_rules(df, rules):
     if not rules:
@@ -181,10 +184,9 @@ def apply_filters_vectorized(df, filter_semantics):
     # Attempt to convert all numeric-like columns to float
     for column in df.columns:
         try:
-            df[column] = pd.to_numeric(df[column], errors='raise')
+            df[column] = pd.to_numeric(df[column], errors='coerce')
         except (ValueError, TypeError):
-            # If the column cannot be converted to numeric, leave it as is
-            continue
+            continue  # Leave non-numeric columns as they are
 
     filtered_df = df.copy()
     for filter_condition in filter_semantics:
@@ -195,8 +197,6 @@ def apply_filters_vectorized(df, filter_semantics):
             logger.error(f"Error applying filter '{filter_condition}': {e}")
 
     return filtered_df
-
-
 
 
 def parse_then_action(action):

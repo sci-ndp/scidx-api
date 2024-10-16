@@ -64,7 +64,7 @@ async def process_url_stream(stream, filter_semantics, buffer_lock, send_data, l
                 logger.info(f"Finished processing NetCDF file.")
                 return  # Exit once the file has been processed successfully
 
-            elif file_type == 'json':
+            elif file_type == 'JSON':
                 # Process JSON file stream
                 response = requests.get(resource_url)
                 response.raise_for_status()
@@ -264,6 +264,10 @@ async def process_json_stream(response, processing, mapping, stream, send_data, 
         additional_info = get_nested_json_value(json_data, additional_key.split('.')) if additional_key else None
         info = get_nested_json_value(json_data, info_key.split('.')) if info_key else None
 
+        # **Add a check here to handle the 'results' key automatically**
+        if isinstance(data, dict) and "results" in data:
+            data = data["results"]
+
         # Send data in chunks
         start_time = loop.time()
         last_send_time = time.time()
@@ -295,6 +299,7 @@ async def process_json_stream(response, processing, mapping, stream, send_data, 
 
     except Exception as e:
         logger.error(f"Error processing JSON stream: {e}")
+
 
 async def process_netcdf_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
     try:
