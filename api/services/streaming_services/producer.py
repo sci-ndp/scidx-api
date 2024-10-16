@@ -12,13 +12,15 @@ KAFKA_SERVER = f"{kafka_settings.kafka_host}:{kafka_settings.kafka_port}"
 
 logger = logging.getLogger(__name__)
 
+active_producers = []
+
 class Producer:
     def __init__(self, filter_semantics, data_streams):
         self.data_stream_id = str(uuid4())
         self.data_streams = data_streams
         self.filter_semantics = filter_semantics
         self.stop_event = asyncio.Event()
-        self.executor = ThreadPoolExecutor(max_workers=10)  # Control I/O-bound task concurrency
+        self.executor = ThreadPoolExecutor(max_workers=10)
         self.loop = asyncio.get_running_loop()
         self.producer = AIOKafkaProducer(bootstrap_servers=KAFKA_SERVER)
         self.buffer_lock = asyncio.Lock()
@@ -32,7 +34,6 @@ class Producer:
         await self.producer.start()
         logger.info(f"Producer started for data stream ID: {self.data_stream_id}")
         try:
-            # Launch tasks for each stream
             self.tasks = [asyncio.create_task(self.process_stream(stream)) for stream in self.data_streams]
             await asyncio.gather(*self.tasks)
         except Exception as e:
@@ -72,14 +73,13 @@ class Producer:
         """Handle errors during stream processing with retry logic."""
         resource = stream.resources[0]
         logger.error(f"Error processing stream {resource.format}: {error}")
-        # Retry logic with exponential backoff
         retries = self.retry_attempts.get(stream, 0)
         if retries < self.retry_limit:
             self.retry_attempts[stream] = retries + 1
-            backoff_time = 2 ** retries  # Exponential backoff
+            backoff_time = 2 ** retries
             logger.info(f"Retrying stream {resource.format} in {backoff_time} seconds...")
             await asyncio.sleep(backoff_time)
-            await self.process_stream(stream)  # Retry the stream
+            await self.process_stream(stream)
         else:
             logger.error(f"Retry limit reached for {resource.format}, skipping further retries.")
 
@@ -95,13 +95,11 @@ class Producer:
     async def stop(self):
         """Stop the producer and cancel all ongoing tasks."""
         logger.info("Stopping all producer tasks...")
-        self.stop_event.set()  # Signal to stop all tasks
+        self.stop_event.set()
         
-        # Cancel any running tasks gracefully
         for task in self.tasks:
             task.cancel()
 
-        # Wait for all tasks to be canceled or finished
         await asyncio.gather(*self.tasks, return_exceptions=True)
         await self.shutdown_producer()
         
