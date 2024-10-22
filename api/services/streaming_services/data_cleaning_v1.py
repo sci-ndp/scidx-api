@@ -49,67 +49,61 @@ def eval_condition(condition, df):
     # Parsing the field, operator, and value
     field, operator, value = parse_condition(condition)
 
-    # Ensure that the field is treated as a string key for column names with spaces
-    if field in df.columns:
-        field_values = df[field]
-    else:
+    # Check if the field exists in the dataframe
+    if field not in df.columns:
         logger.error(f"Column '{field}' does not exist in the dataframe.")
         return pd.Series([False] * len(df), index=df.index)
 
-    # Convert numeric columns to numeric type if possible
-    for column in df.columns:
-        try:
-            df[column] = pd.to_numeric(df[column])
-        except (ValueError, TypeError):
-            pass  # Keep the column as-is if it cannot be converted
+    # Log the values before applying the condition
+    logger.info(f"Evaluating condition: {condition}")
+    logger.info(f"Column '{field}' before processing: {df[field].head()}")
 
-
-    # Try to cast the column values and the filter value to numeric if possible
-    try:
-        # Try to convert value to numeric (for numeric comparisons)
-        value_values = pd.to_numeric(value, errors='raise')
-    except ValueError:
-        # If it fails, treat value as a string
-        value_values = value.strip("'\"")
-        field_values = field_values.astype(str)  # Ensure field values are treated as strings for comparison
+    # Cast the column values to strings for the IN operator
+    if operator == 'IN':
+        df[field] = df[field].astype(str)
+        logger.info(f"Column '{field}' after casting to string: {df[field].head()}")
 
     # Handle the IN condition separately
     if operator == 'IN':
         try:
-            # Ensure value is treated as a list of strings for the comparison
             if isinstance(value, str):
                 value_list = eval(value)
             else:
                 value_list = value
-            
+
             if not isinstance(value_list, list):
                 logger.error(f"Invalid list for IN condition: '{value}' in condition '{condition}'")
                 return pd.Series([False] * len(df), index=df.index)
 
-            # Convert the field values to strings for comparison if they are not already
-            return field_values.astype(str).isin(value_list)
-            
+            return df[field].isin(value_list)
         except Exception as e:
             logger.error(f"Error parsing list for IN condition: '{value}' in condition '{condition}': {e}")
             return pd.Series([False] * len(df), index=df.index)
 
+    # Apply comparison operators (e.g., >=, >, etc.)
+    try:
+        value_values = pd.to_numeric(value, errors='raise')
+    except ValueError:
+        value_values = value.strip("'\"")
+        df[field] = df[field].astype(str)
 
-
-    # Apply comparison operators
     comparison_map = {
-        '>=': field_values >= value_values,
-        '>': field_values > value_values,
-        '<=': field_values <= value_values,
-        '<': field_values < value_values,
-        '!=': field_values != value_values,
-        '=': field_values == value_values,
+        '>=': df[field] >= value_values,
+        '>': df[field] > value_values,
+        '<=': df[field] <= value_values,
+        '<': df[field] < value_values,
+        '!=': df[field] != value_values,
+        '=': df[field] == value_values,
     }
 
     result = comparison_map.get(operator)
     if result is not None:
         return result
+
     logger.error(f"Unknown operator '{operator}' in condition '{condition}'")
     return pd.Series([False] * len(df), index=df.index)
+
+
 
 
 def parse_condition(condition):
@@ -194,6 +188,34 @@ def apply_if_then_rules(df, rules):
 
     return df
 
+
+def parse_then_action(action):
+    if "=" in action:
+        field, value = action.split("=", 1)
+        return field.strip(), value.strip()
+    raise ValueError(f"Invalid action: {action}")
+
+
+def safely_convert_to_numeric(df, column):
+    """
+    Tries to convert a column to numeric values.
+    If the conversion results in all NaN, reverts to string type.
+    """
+    original_column = df[column].copy()
+    
+    # Try converting to numeric
+    df[column] = pd.to_numeric(df[column], errors='coerce')
+    
+    # Check if the conversion led to all NaN values
+    if df[column].isna().all():
+        # If all values are NaN after conversion, revert to original string values
+        df[column] = original_column.astype(str)
+        logger.info(f"Column '{column}' was reverted to string type after failed numeric conversion.")
+    else:
+        logger.info(f"Column '{column}' successfully converted to numeric.")
+
+    return df[column]
+
 def apply_filters_and_rules(df, filter_semantics):
     """
     Apply filters and rules in chronological order.
@@ -203,54 +225,39 @@ def apply_filters_and_rules(df, filter_semantics):
     if not filter_semantics:
         return df
 
-    # Attempt to convert all numeric-like columns to float for numeric comparisons
-    for column in df.columns:
-        try:
-            df[column] = pd.to_numeric(df[column], errors='coerce')
-        except (ValueError, TypeError):
-            continue
-
     filtered_df = df.copy()
 
     # Apply each filter or rule in the order they appear
     for idx, condition in enumerate(filter_semantics):
-        # logger.info(f"Applying filter or rule {idx+1}/{len(filter_semantics)}: {condition}")
-
         try:
             if "IF" in condition and "THEN" in condition:
                 # This is an IF-THEN rule
                 filtered_df = apply_if_then_rules(filtered_df, [condition])
-                # logger.info(f"IF-THEN rule '{condition}' applied, {len(filtered_df)} rows remain.")
             else:
-                # This is a regular condition
+                # Apply regular conditions
                 matches = eval_condition(condition, filtered_df)
                 filtered_df = filtered_df[matches]
-                # logger.info(f"Filter '{condition}' applied, {len(filtered_df)} rows remain.")
-            
-            # Log the column names after each step
-            # logger.info(f"Columns after applying filter {idx+1}: {list(filtered_df.columns)}")
 
+            # After each condition, ensure all columns are properly typed
+            for column in filtered_df.columns:
+                if filtered_df[column].dtype == 'object':  # Check object (string) columns
+                    filtered_df[column] = safely_convert_to_numeric(filtered_df, column)
+                
         except Exception as e:
             logger.error(f"Error applying condition '{condition}': {e}")
 
     return filtered_df
-
-
-def parse_then_action(action):
-    if "=" in action:
-        field, value = action.split("=", 1)
-        return field.strip(), value.strip()
-    raise ValueError(f"Invalid action: {action}")
-
 
 async def process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics, if_then_rules=None, additional_info=None):
     async with buffer_lock:
         df = pd.DataFrame(messages)
         
         mapped_data = mapped_values_vectorized(mapping, df)
+        logger.info(f"Mapped data: {mapped_data.head(5)}")
 
         # Apply all filters and rules in chronological order
         filtered_data = apply_filters_and_rules(mapped_data, filter_semantics)
+        logger.info(f"Filtered data: {filtered_data.head(5)}")
 
         # Use the final filtered data
         if not filtered_data.empty:
@@ -263,4 +270,4 @@ async def process_and_send_data(messages, mapping, stream, send_data, buffer_loc
                     stream.extras['additional_info'] = str(additional_info)
             await send_data(filtered_data, stream, loop)
         else:
-            pass  # No data after filtering
+            logger.warning("No data after filtering.")

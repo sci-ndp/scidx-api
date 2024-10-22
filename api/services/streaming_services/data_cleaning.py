@@ -2,7 +2,7 @@ import pandas as pd
 import logging
 import re
 
-from .window_filtering import apply_window_filter
+from .window_filtering import apply_window_filter, apply_window_filter_if_else_with_nan
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +146,7 @@ def evaluate_expression(expression, df):
         logger.error(f"Error evaluating expression '{expression}': {e}")
         return pd.Series([None] * len(df), index=df.index)
 
+
 def apply_if_then_rules(df, rules):
     if not rules:
         return df
@@ -162,33 +163,54 @@ def apply_if_then_rules(df, rules):
                 else:
                     then_part = then_else_part
                 
-                # 1. Evaluate the IF condition
-                matches = eval_condition(if_conditions, df)
+                # Check if the IF condition contains a window_filter
+                if "window_filter" in if_conditions:
+                    match = re.match(r"window_filter\((\d+),\s*(\w+),\s*(.+)\)", if_conditions)
+                    if match:
+                        window_size = int(match.group(1))
+                        statistic = match.group(2)
+                        condition_str = match.group(3)
 
-                # 2. Apply the THEN action
-                if matches.any():
+                        # Apply window filter specifically for IF-THEN-ELSE
+                        action_field, action_value = parse_then_action(then_part.strip())
+                        matches, is_window_nan = apply_window_filter_if_else_with_nan(df, window_size, statistic, condition_str, action_field)
+                    else:
+                        logger.error(f"Invalid window_filter format in IF condition: {if_conditions}")
+                        continue
+                else:
+                    # Evaluate regular IF condition
+                    matches = eval_condition(if_conditions, df)
+                    is_window_nan = pd.Series([False] * len(df))  # No window-based NaNs for regular conditions
+
+                # Apply THEN action
+                if matches is not None and matches.any():
                     action_field, action_value = parse_then_action(then_part.strip())
                     if action_field not in df.columns:
-                        df[action_field] = None  # Create the column if it doesn't exist
+                        df[action_field] = None  # Create column if not exists
 
-                    # Handle the assignment for the THEN action
-                    df.loc[matches, action_field] = evaluate_expression(action_value, df)
+                    # Only update where matches are True, and window is fully populated (non-NaN)
+                    df.loc[matches == True, action_field] = evaluate_expression(action_value, df)
 
-                # 3. Apply the ELSE action if present
+                # Apply ELSE action if present
                 if else_part:
-                    non_matches = ~matches
+                    non_matches = ~matches.fillna(False)
                     action_field, action_value = parse_then_action(else_part.strip())
 
-                    if action_field not in df.columns:
-                        df[action_field] = None  # Create the column if it doesn't exist
-
-                    # Handle the assignment for the ELSE action
-                    df.loc[non_matches, action_field] = evaluate_expression(action_value, df)
+                    # If column exists, don't rely on NaN checks
+                    if action_field in df.columns:
+                        # Apply ELSE directly to all non-matching rows (skip NaN checks for existing columns)
+                        df.loc[non_matches == True, action_field] = evaluate_expression(action_value, df)
+                    else:
+                        # Apply ELSE only where the column remains NaN after THEN and is not due to window insufficiency
+                        df[action_field] = None  # Create column if not exists
+                        df.loc[(df[action_field].isna()) & (non_matches == True) & (~is_window_nan), action_field] = evaluate_expression(action_value, df)
 
         except Exception as e:
             logger.error(f"Error applying rule '{rule}': {e}")
 
     return df
+
+
 
 
 def parse_then_action(action):
@@ -240,8 +262,10 @@ def apply_filters_and_rules(df, filter_semantics):
                     window_size = int(match.group(1))
                     statistic = match.group(2)
                     condition_str = match.group(3)
+                    
+                    # Apply the window filter and reduce the DataFrame based on results
                     matches = apply_window_filter(filtered_df, window_size, statistic, condition_str)
-                    filtered_df = filtered_df[matches]
+                    filtered_df = filtered_df[matches]  # Keep only rows that match
                 else:
                     logger.error(f"Invalid window_filter format: {condition}")
                     continue
@@ -264,6 +288,7 @@ def apply_filters_and_rules(df, filter_semantics):
             logger.error(f"Error applying condition '{condition}': {e}")
 
     return filtered_df
+
 
 
 async def process_and_send_data(messages, mapping, stream, send_data, buffer_lock, loop, filter_semantics, if_then_rules=None, additional_info=None):
