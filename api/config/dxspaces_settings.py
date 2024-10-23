@@ -35,7 +35,7 @@ class Settings(BaseSettings):
         if have_staging:
             return(RegistrationTest(self.dxspaces_registration))
         else:
-            return(False)
+            return(RegistrationTest('none'))
 
     model_config = {
         "env_file": "./env_variables/.env_dxspaces",
