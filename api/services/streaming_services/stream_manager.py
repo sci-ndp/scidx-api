@@ -5,8 +5,9 @@ import signal
 from fastapi import HTTPException
 from api.models.request_stream_model import ProducerPayload
 from .consumer import consume_kafka_data, active_consumers
-from .producer import Producer, active_producers, delete_all_created_streams
+from .producer import Producer, active_producers, delete_all_created_streams, kafka_settings
 from api.services.datasource_services import search_datasource
+
 
 logger = logging.getLogger(__name__)
 
