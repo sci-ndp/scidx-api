@@ -7,12 +7,14 @@ from api.config.kafka_settings import kafka_settings
 from .compressor import compress_data
 from .stream_processing.kafka_manager import process_kafka_stream
 from .stream_processing.url_manager import process_url_stream
+from confluent_kafka.admin import AdminClient, KafkaException
 
 KAFKA_SERVER = f"{kafka_settings.kafka_host}:{kafka_settings.kafka_port}"
 
 logger = logging.getLogger(__name__)
 
 active_producers = []
+created_streams = []
 
 class Producer:
     def __init__(self, filter_semantics, data_streams):
@@ -27,7 +29,9 @@ class Producer:
         self.tasks = []
         self.retry_limit = 5
         self.retry_attempts = {}
+
         logger.info(f"Producer initialized with ID: {self.data_stream_id}")
+        created_streams.append(self.data_stream_id)
 
     async def run(self):
         """Start the Kafka producer and begin streaming data from all streams."""
@@ -108,3 +112,32 @@ class Producer:
         await self.producer.stop()
         self.executor.shutdown(wait=False)
         logger.info(f"Producer stopped for data stream ID: {self.data_stream_id}")
+
+
+async def delete_all_created_streams():
+    """Delete all created Kafka topics based on the created_streams list."""
+    logger.info("Deleting all created Kafka topics...")
+    
+    if not created_streams:
+        logger.info("No streams to delete.")
+        return
+
+    try:
+        admin_client = AdminClient({'bootstrap.servers': KAFKA_SERVER})
+        topics_to_delete = [f"data_stream_{stream_id}" for stream_id in created_streams]
+
+        logging.info(f"Found the following topics to delete: {topics_to_delete}")
+
+        fs = admin_client.delete_topics(topics_to_delete, operation_timeout=30)
+        for topic, f in fs.items():
+            try:
+                f.result()  # The result itself is None
+                logging.info(f"Deleted Kafka topic {topic}")
+            except Exception as e:
+                logging.error(f"Failed to delete topic {topic}: {e}")
+
+        logging.info("All topics deletion process completed.")
+    except KafkaException as e:
+        logging.error(f"Kafka error: {e}")
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")

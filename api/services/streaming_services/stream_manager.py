@@ -1,11 +1,11 @@
 import logging
 import asyncio
 import json
-
+import signal
 from fastapi import HTTPException
 from api.models.request_stream_model import ProducerPayload
-from .consumer import consume_kafka_data
-from .producer import Producer, active_producers
+from .consumer import consume_kafka_data, active_consumers
+from .producer import Producer, active_producers, delete_all_created_streams
 from api.services.datasource_services import search_datasource
 
 logger = logging.getLogger(__name__)
@@ -88,3 +88,34 @@ async def get_stream_data(topic: str):
     """
     async for data in consume_kafka_data(topic):
         yield data
+
+
+# Signal handler to gracefully handle shutdown signals like SIGINT and SIGTERM
+def handle_shutdown_signal(signal_received, frame):
+    logger.info(f"Signal {signal_received} received, initiating graceful shutdown...")
+    asyncio.get_event_loop().call_soon(asyncio.create_task, shutdown_all_producers())
+
+# Stop all active consumers
+async def stop_all_active_consumers():
+    logger.info("Shutting down all active consumers...")
+    for consumer in active_consumers:
+        await consumer.stop()  # Stop each consumer asynchronously
+    logger.info("All consumers stopped.")
+
+# Stop all active producers and consumers
+async def shutdown_all_producers():
+    logger.info("Initiating shutdown process for all producers and consumers...")
+
+    # Stop consumers first
+    await stop_all_active_consumers()
+
+    logger.info("Shutting down all active producers...")
+    for producer in active_producers:
+        await producer.stop()  # Stop each producer asynchronously
+
+    # Ensure all producers have stopped and tasks are canceled
+    await asyncio.sleep(4)  # Delay to ensure all tasks are properly completed
+    logger.info("All producers stopped.")
+
+    # Finally delete all created data streams
+    await delete_all_created_streams()

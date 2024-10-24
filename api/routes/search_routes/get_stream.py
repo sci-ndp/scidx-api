@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import List, Optional
-from api.services.streaming_services.consumer import consume_kafka_data
+from api.services.streaming_services.consumer import consume_kafka_data, does_topic_exist
 from api.config.ckan_settings import ckan_settings
 from api.config.kafka_settings import kafka_settings
 
@@ -63,6 +63,10 @@ async def get_kafka_stream(
             port = kafka_resource.get("port", kafka_settings.kafka_port)
 
         if topic and host and port:
+            # Check if the topic exists before creating the consumer
+            if not await does_topic_exist(topic, f"{host}:{port}"):
+                raise HTTPException(status_code=404, detail=f"Kafka topic '{topic}' not found.")
+            
             # Call generator with the added logic to stop on client disconnect
             return StreamingResponse(
                 kafka_event_generator(topic=topic, host=host, port=port, use_compression=False),
@@ -81,6 +85,7 @@ async def get_kafka_stream(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+
 async def kafka_event_generator(topic: str, host: Optional[str] = None, port: Optional[int] = None, use_compression: bool = True):
     consumer_generator = consume_kafka_data(topic=topic, host=host, port=port, use_compression=use_compression)
     
@@ -91,5 +96,8 @@ async def kafka_event_generator(topic: str, host: Optional[str] = None, port: Op
     except asyncio.CancelledError:
         logger.info(f"Client disconnected from stream: {topic}. Closing consumer.")
         await consumer_generator.aclose()  # Ensure the consumer is stopped when client disconnects
+    except Exception as e:
+        logger.error(f"Error in Kafka event generator for topic '{topic}': {e}")
+        yield json.dumps({"error": str(e)})  # Yield an error message to the client
     finally:
         logger.info(f"Kafka consumer stopped for topic: {topic}.")

@@ -20,3 +20,4 @@ h5netcdf
 h5py
 sseclient
 blosc
+confluent-kafka
