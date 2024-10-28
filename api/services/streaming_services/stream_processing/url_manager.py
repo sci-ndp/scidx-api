@@ -129,9 +129,6 @@ async def process_txt_stream(response, processing, mapping, stream, send_data, b
 
     column_names = first_chunk.columns.tolist()
 
-    start_time = loop.time()
-    last_send_time = time.time()
-
     while True:
         chunk = pd.read_csv(
             txt_data,
@@ -155,13 +152,6 @@ async def process_txt_stream(response, processing, mapping, stream, send_data, b
             filter_semantics
         )
 
-        elapsed_time = loop.time() - start_time
-        time_since_last_send = time.time() - last_send_time
-
-        if time_since_last_send >= TIME_WINDOW or elapsed_time >= TIME_WINDOW:
-            break
-
-        last_send_time = time.time()
 
 async def process_csv_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
     delimiter = processing.get('delimiter')
@@ -260,19 +250,16 @@ async def process_json_stream(response, processing, mapping, stream, send_data, 
         # Extract data using the data_key (handle nested keys)
         data = get_nested_json_value(json_data, data_key.split('.')) if data_key else json_data
 
-        # Handle additional info and context keys if they exist
-        additional_info = get_nested_json_value(json_data, additional_key.split('.')) if additional_key else None
-        info = get_nested_json_value(json_data, info_key.split('.')) if info_key else None
+        # Flatten the JSON if necessary
+        if isinstance(data, dict):
+            data = [flatten_json(data)]
 
-        # **Add a check here to handle the 'results' key automatically**
-        if isinstance(data, dict) and "results" in data:
-            data = data["results"]
+        # Convert to DataFrame for consistent processing
+        data_df = pd.DataFrame(data)
 
         # Send data in chunks
         start_time = loop.time()
         last_send_time = time.time()
-
-        data_df = pd.DataFrame(data)
 
         while not data_df.empty:
             chunk = data_df.iloc[:CHUNK_SIZE]
@@ -291,14 +278,14 @@ async def process_json_stream(response, processing, mapping, stream, send_data, 
             elapsed_time = loop.time() - start_time
             time_since_last_send = time.time() - last_send_time
 
-            # Break the loop if time window is exceeded
             if time_since_last_send >= TIME_WINDOW or elapsed_time >= TIME_WINDOW:
                 break
 
-            last_send_time = time.time()  # Reset the last send time
+            last_send_time = time.time()
 
     except Exception as e:
         logger.error(f"Error processing JSON stream: {e}")
+
 
 
 async def process_netcdf_stream(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics):
@@ -364,6 +351,7 @@ async def process_netcdf_stream(response, processing, mapping, stream, send_data
 
     except Exception as e:
         logger.error(f"Error processing NetCDF stream: {e}")
+
 
 async def process_streaming_data(response, processing, mapping, stream, send_data, buffer_lock, loop, filter_semantics, stop_event):
     logger.info("Starting dynamic stream processing...")
@@ -480,6 +468,7 @@ async def process_streaming_data(response, processing, mapping, stream, send_dat
         logger.error(f"Unhandled exception during stream processing: {e}")
         await asyncio.sleep(BACKOFF_TIME)
 
+
 def flatten_json(nested_json, parent_key='', sep='.'):
     """
     Flatten a nested JSON object, creating keys for nested values by joining 
@@ -490,9 +479,13 @@ def flatten_json(nested_json, parent_key='', sep='.'):
         new_key = f"{parent_key}{sep}{k}" if parent_key else k
         if isinstance(v, dict):
             flat_dict.update(flatten_json(v, new_key, sep=sep))
+        elif isinstance(v, list):
+            for idx, item in enumerate(v):
+                flat_dict[f"{new_key}[{idx}]"] = item
         else:
             flat_dict[new_key] = v
     return flat_dict
+
 
 
 def get_nested_json_value(data, keys):
