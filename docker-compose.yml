@@ -9,10 +9,8 @@ services:
       - ./api:/code/api
       - ./env_variables:/code/env_variables
       - ./requirements.txt:/code/requirements.txt
-    networks:
-      - backend
-
-networks:
-  backend:
-    name: backend
-    driver: bridge
+    environment:
+      # Adjust based on production or staging needs
+      - HOST=0.0.0.0
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8000 --workers 4  # Adjust workers based on CPU
+    network_mode: "host"  # Use host network for lower latency on Linux
