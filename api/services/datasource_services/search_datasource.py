@@ -40,8 +40,8 @@ def tstamp_to_query(timestamp):
         if end_time == '':
             end_time = '*'
         count_max = None
-        sort = 'timetamp asc'
-        fq = f'timestamp:[{start_time} TO {end_time}]'
+        sort = 'timestamp asc'
+        fq = f'timestamp:[{start_time} TO {end_time}] OR (start_time:[* TO {end_time}] AND end_time:[{start_time} TO *])'
     return(fq, count_max, sort)
 
 @retry(
@@ -98,7 +98,7 @@ async def search_datasource(
     if timestamp:
         (fq_tstamp, count_max, sort) = tstamp_to_query(timestamp)
         fq_list.append(fq_tstamp)
-    
+
     rows = 1000
     if count_max and count_max < rows:
         rows = count_max
